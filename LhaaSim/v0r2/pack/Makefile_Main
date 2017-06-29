@@ -1,0 +1,10 @@
+all:
+	@root-config --help > /dev/null
+	cd src && make
+	mkdir -p bin
+	cd bin && ln -s -f ../src/EasySim ../src/Ascii .
+
+clean:
+	cd src && make clean
+	cd data && make clean
+	rm -f bin/EasySim bin/Ascii

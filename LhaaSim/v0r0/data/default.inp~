@@ -1,0 +1,59 @@
+#mode 			(SHOWER | CALIB )
+SHOWER
+#simmode 		(FAST | DETAILED | SAMPLE)
+DETAILED
+#muemmode      		(DEFAULT | MUEM) (if MUEM, mu and em traces)  
+MUEM	
+#elecmode      		(DEFAULT | FULL | PM | SHOWSAT)(if FULL intermediate elecsim written)
+FULL
+#number of events	
+1
+#
+######The following parameters are relevant only in CALIBRATION mode #######
+#
+#runnumber			
+01
+#partmode      		(VEM| SCINTILLATOR| FIXEDTHETA| HORIZONTAL| RANDOM)
+SCINTILLATOR			      		    
+#partcode		(3 for muons, 2 for electrons, 1 for gammas,0 for all)
+3
+#partenergy		(in GeV = 1 Gev for VEM, 0=spectrum)
+1
+#parttheta		(in degrees relevant only in THETAFIXED mode)
+60
+#partaddmode		(DEFAULT | DOUBLE | MULTIPLE)
+DEFAULT
+#npartmultiple		(relevant only in multiple and calibration mode = mu number)
+20
+#
+######The following parameters are read only in SHOWER mode #######
+#
+#arraymode 		(READFILE | DEFAULTSOUTH | STARARRAY | DEFAULTNORTH | LHAASO_MD | LHAASO_ED) 
+LHAASO_MD
+#arrayfilename 		(filename | number of stations in default array)
+100
+#eventmode		(DEFAULT | READAVERAGEPOS) (choice of the shower core)
+DEFAULT			
+#acceptance mode	(1=ON | 0=OFF) (choice of the shower core)
+0				
+#easting average	(easting coord ,relevant only in   READAVERAGEPOS mode)
+0	
+#easting spread		(in easting coordinates in READAVERAGEPOS mode)
+.8			(In DEFAULT mode , put 1 for dispersion on full array)
+#northing average	(northing coord relevant only in   READAVERAGEPOS mode)
+0
+#northing spread	(in northing coordinates in READAVERAGEPOS mode)
+.8			(In DEFAULT mode , put 1 for dispersion on full array)
+#Rotation of the shower
+240
+#rmin (m) 
+0 
+#rmax (m)
+4000
+#delta_r (sampling zone)
+0.15
+#delta_azi (sampling zone)
+20
+#max number of clones
+1
+#

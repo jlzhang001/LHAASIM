@@ -1,0 +1,25 @@
+CPPFLAGS= -DCALIBONLY -Wno-deprecated -I`root-config --cflags`
+LINKFLAGS= `root-config --libs`
+
+SRC=Event.o Station.o Array.o Particle.o EventDict.o ShowerParam.o Utils.o BuildProcessesTables.o FastSimulation.o ManageEvent.o EasySimConfig.o Analyze.o AnalyzeStar.o AnaDict.o
+
+all: EasySim Ascii
+
+EventDict.cc: Event.h Station.h Array.h Particle.h EasySimLinkDef.h
+	rootcint -f EventDict.cc -c Event.h Station.h Array.h Particle.h EasySimLinkDef.h
+AnaDict.cc: Analyze.h AnalyzeStar.h
+	rootcint -f AnaDict.cc -c Analyze.h AnalyzeStar.h
+
+.o:
+	c++ -c $<
+
+EasySim: ${SRC} EasySim.o
+	c++ -o $@ ${SRC} EasySim.o ${LINKFLAGS}
+
+Ascii: ${SRC} Ascii.o
+	c++ -o $@ ${SRC} Ascii.o ${LINKFLAGS}
+
+clean:
+	rm -f *.o *Dict* EasySim Ascii
+
+# dependencies added by makedep (and slightly alterated for ROOT dictionnaries)

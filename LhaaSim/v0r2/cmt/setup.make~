@@ -1,0 +1,51 @@
+#
+# File generated ${now}
+#
+
+
+
+CMTROOT = /home/deligny/CDAS/CMT/v1r8cdas
+CONVERTROOT = /projet/auger/Diane/AUGERSIM2/Convert/v0r2
+ROOTWROOT = /projet/auger/Diane/CDAS/RootW/v2r8
+use_requirements = requirements $(CMTROOT)/mgr/requirements $(CONVERTROOT)/cmt/requirements $(ROOTWROOT)/cmt/requirements 
+constituents = EventDict AnaDict Event Tools Config Ana LhaaSim AnaEvent anamuons 
+
+LhaaSim_tag = $(tag)
+
+all :: config
+
+csh :: $(LhaaSim_tag).csh
+	@/bin/echo $(LhaaSim_tag).csh ok
+
+$(LhaaSim_tag).csh : cmt_path.make requirements ${use_requirements}
+	@if test "$(nocheck)" = ""; then \
+	  /bin/echo "Rebuilding $@"; \
+	  $(cmtexe) setup -tag=$(LhaaSim_tag) | sed -e 's#`${CMTROOT}/mgr/cmt system`#$(LhaaSim_tag)#' >$(LhaaSim_tag).csh; \
+	fi
+
+sh :: $(LhaaSim_tag).sh
+	@/bin/echo $(LhaaSim_tag).sh ok
+
+$(LhaaSim_tag).sh : cmt_path.make requirements ${use_requirements}
+	@if test "$(nocheck)" = ""; then \
+	  /bin/echo "Rebuilding $@"; \
+	  $(cmtexe) setup -sh -tag=$(LhaaSim_tag) | sed -e 's#`${CMTROOT}/mgr/cmt system`#$(LhaaSim_tag)#' >$(LhaaSim_tag).csh; \
+	fi
+
+config :: checkuses ##$(LhaaSim_tag).make
+	@/bin/echo $(LhaaSim_tag).make ok
+
+env.make ::
+	@printenv >env.make.tmp; $(cmtexe) check files env.make.tmp env.make
+
+$(LhaaSim_tag).make : requirements $(use_requirements)
+	@if test ! -d $(bin) ; then $(mkdir) -p $(bin); fi
+	@if test -f $(LhaaSim_tag).make; then /bin/rm -f $(LhaaSim_tag).make; fi
+	@$(cmtexe) -quiet build tag_makefile -tag=$(LhaaSim_tag) >t$$$$; mv t$$$$ $(LhaaSim_tag).make
+
+-include $(LhaaSim_tag).make
+
+configclean ::
+	/bin/rm -f *.make*
+
+

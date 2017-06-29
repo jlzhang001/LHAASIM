@@ -1,0 +1,40 @@
+
+              WCD FAST SIMULATION
+
+This code is currently just a repackaging of the EasySim code used in Auger.
+It is based on EasySim v5r1 (July 2006).
+In order to use it, please follow these simple instructions:
+
+1) Installation
+
+You just need ROOT (http://root.cern.ch/), installed and properly configured
+(ROOTSYS set, ROOTSYS/bin in PATH...)
+
+From the main dir, just enter:
+make
+
+Report any installation problem to bertou@gmail.com
+
+2) Modifying geometry
+
+The detector geometry is defined in src/Constants.h
+To modify it, change the values STATION_RADIUS and STATION_HEIGHT, and the
+number and position of PMTs (NPM X_PM and Y_PM). for example, our test tank
+at Bariloche is:
+const double STATION_RADIUS     = 0.7;  //(m)
+const double STATION_HEIGHT     = 1.46;  //(m)
+const int  NPM                  = 1;
+const double X_PM[NPM]          = {0.};
+const double Y_PM[NPM]          = {0.};
+
+Then recompile (in main dir, run "make")
+
+3) Running
+
+Go to the data directory and edit the default.inp file. It is straightforward.
+Be sure to be in CALIB mode (SHOWER mode is deactivated in this package).
+Run it from the data directory:
+make
+It will provide a root file with a specific name depending on the parameters
+defined in the default.inp file. It is then converted in ascii, extracting
+the FADC traces, producing a .dat ascii file.

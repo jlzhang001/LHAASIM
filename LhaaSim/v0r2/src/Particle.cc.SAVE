@@ -1,0 +1,2030 @@
+/*------------------------------------------------
+-               Particle.cc  (v0r2)              -
+-                                                -
+- implementation file for all classes Particle   -
+------------------------------------------------*/
+
+
+
+#include "Particle.h"
+#include "LhaaSimConfig.h"
+#include "BuildProcessesTables.h"
+#include "Utils.h"
+#include "Constants.h"
+#include <math.h>
+#include <fstream>
+
+ClassImp(Particle)
+ClassImp(ParticleInTank)
+ClassImp(ParticleInScint)
+
+extern double gCherFact;
+extern double gCherPrb[NWAVEL];
+extern double gNpesamples;
+extern Int_t gNshapezones;
+extern Int_t gNshape;
+extern Int_t gShapezone[MAXNUMBEROFADCBINS];
+extern double gIntshape[MAXNUMBEROFADCBINS];
+extern Int_t gNbins;
+extern double gTMinForDeltaRays;
+extern double gBremTable[NSTEP_E][NDIV];
+
+enum
+  {
+    STOP = 0,
+    CONTINUE = 1,
+    LAST
+  };
+
+// Affiche les "cout" si PrintCout = 1, et les masque si = 0
+const Int_t PrintCout = 1;
+
+/*-------------------------------------------------
+  class Particle (parent class)                   -
+  A particle at the ground level.                 -
+  This particle has be produced                   -          
+  by an Air Shower simulation code.               -
+--------------------------------------------------*/
+
+Particle::Particle()
+{
+
+}
+
+
+
+Particle::Particle(Int_t idpart,Int_t ntop,Int_t nside,Float_t time_plane,
+		   Float_t timepart,Float_t energy,Float_t cx,Float_t cy, Float_t cz )
+{
+  fId = idpart;
+  fUX = cx;
+  fUY = cy;
+  fUZ = cz;
+  fT = timepart;
+  fT_plane = time_plane;
+  fE = energy;
+  fWtop = ntop;
+  fWside = nside;
+}
+
+Particle::~Particle()
+{
+
+}
+
+
+/*-------------------------------------------------                              
+  class ParticleInTank                            -
+  Last modification: July 2nd, 2004               -
+  by Isabelle and Carla                           -
+                                                  -
+ Première approximation :                         -
+ -> partie EM absorbée par Terre                  -
+ -> muons non affectés                            -
+                                                  -
+  For Detailed Mode:                              -
+  ------------------                              -
+  * Muon Simulation:                              -
+  Cherenkov production                            -
+  Delta Rays                                      -
+  Muon Decay                                      -
+                                                  -
+  * Electron Simulation:                          -
+  Cherenkov production                            -
+  MultipleScattering                              -
+  Bremsstrahglung                                 -
+  Ionization lost                                 -
+                                                  -
+  * Gamma Simulation:                             -
+  Compton Scattering                              -
+  Pair Production                                 -
+                                                  -
+  For Fast Mode:                                  -
+  --------------                                  -
+  Only Cherenkov production but NO WORKING !!!    - 
+                                                  -
+-------------------------------------------------*/
+
+
+ParticleInTank::ParticleInTank()
+{
+
+}
+
+ParticleInTank::ParticleInTank (Int_t ist,Int_t id,double x,double y,double z, 
+				double cx,double cy,double cz,double tim,double en,double weight)
+  //  : Particle(id, 0,0,0, tim, en, cx, cy, cz)
+{
+  fId = id;
+  fUX = cx;
+  fUY = cy;
+  fUZ = cz;
+  fT = tim;
+  //fT_plane = time_plane;
+  fE = en;
+
+  fISta = ist;
+  fX = x;
+  fY = y;
+  fZ = z;
+  fW = weight;
+  Beta = 0;
+  Range = 0;
+  DxStep = 0;
+  IStep = 0;
+  GLength = 0;
+  MeanIntLength = 0;
+  IntLength = 0;
+  ProbPair = 0;
+  fNCherPhot = 0;
+  fTCherPhot.clear();
+  fNReflexions.clear();
+  fIpm.clear();
+  fBinContent.clear();
+
+}
+ParticleInTank::ParticleInTank (Int_t ist,Int_t id,Int_t motherid,double x,double y,double z, 
+				double cx,double cy,double cz,double tim,double en,double weight)
+  //  : Particle(id, 0,0,0, tim, en, cx, cy, cz)
+{
+  fId = id;
+  fMotherId =  motherid;
+  fUX = cx;
+  fUY = cy;
+  fUZ = cz;
+  fT = tim;
+  //fT_plane = time_plane;
+  fE = en;
+  fISta = ist;
+  fX = x;
+  fY = y;
+  fZ = z;
+  fW = weight;
+  Beta = 0;
+  Range = 0;
+  DxStep = 0;
+  IStep = 0;
+  GLength = 0;
+  MeanIntLength = 0;
+  IntLength = 0;
+  ProbPair = 0;
+  fNCherPhot = 0;
+  fTCherPhot.clear();
+  fNReflexions.clear();
+  fIpm.clear();
+  fBinContent.clear();
+
+}
+
+ParticleInTank::~ParticleInTank()
+{
+
+}
+
+
+// -------------------------------------------------
+// DETECTOR SIMULATION FOR EACH PARTICLE           -
+// -------------------------------------------------
+
+
+/* --------------------------------------------------
+   Manager of the step by step propagation of each  -
+   particle in a tank. In each step, determine the  -
+   length and generate Cherenkov photons.           -        
+   ------------------------------------------------*/
+void ParticleInTank::DoDetSim()  
+{
+  if(abs(fId) == 1) {GeomLength(); DoProcesses();}
+  
+  else if (abs(fId) == 2 || abs(fId) == 3) {   
+    GeomLength();
+    Range=GLength;
+    while ( DoNextStep() == CONTINUE ) {
+      ComputeStepParameters();
+      if ( DoProcesses() == STOP ) break;
+      Propagate();
+    }
+  } else return;
+}
+
+
+/*  ------------------------------------
+    Computes the distance between the  -
+    particle and the tank.             -
+    ----------------------------------*/
+void ParticleInTank::GeomLength()
+{
+  Double_t aa,bb,cc;
+  aa = fUX*fUX + fUY*fUY;
+  bb = fX*fUX + fY*fUY;
+  cc = STATION_RADIUS*STATION_RADIUS - fX*fX - fY*fY;
+  //   length up to the external cylinder
+  if(aa!=0) GLength = (-bb + sqrt(bb*bb+cc*aa))/aa;
+  else GLength = INFINITY;
+  //   length up to the top or the bottom
+  if(fUZ<0) GLength = min(GLength,-fZ/fUZ);
+   else if(fUZ!=0)
+     GLength = min(GLength,(STATION_HEIGHT-fZ)/fUZ);
+   else  GLength = 2*(fX*fUX + fY*fUY);
+  
+  return;
+}
+
+
+/*-----------------------------------------
+  Decides if the step by step tracking   -
+  must be continued or stopped.          -
+  -----------------------------------------*/
+
+ int ParticleInTank::DoNextStep()
+{
+  int ret = 0;
+  IStep = 0;
+  
+  switch (abs(fId)) {
+    
+  case 1:
+    
+    break;
+    
+  case 2:
+    while (fE <= ESTEP_E[IStep]) IStep++;
+    ret = (IStep<NSTEP_E && Range>=0);
+    
+    break;
+
+  case 3:
+    while (fE <= ESTEP_MU[IStep]) IStep++;
+    ret = (IStep <= NSTEP_MU && Range>0);
+    break;
+
+  default:
+    cerr << "Erreur dans ParticleInTank::DoNextStep..." << endl;
+
+  }
+
+  if (ret) ret = CONTINUE;
+  else ret = STOP;
+  return ret;
+}
+
+/* ----------------------------------------------
+
+   --------------------------------------------*/
+
+void ParticleInTank::ComputeStepParameters()
+{
+  double energy;
+  switch (abs(fId)) {
+
+  case 1:
+
+    break;
+
+  case 2:
+   
+    if (IStep == 0) { // case energy > 0.1 GeV      
+      DxStep=0.2;
+      energy=fE;
+    } else { // case energy < 0.1 GeV
+      DxStep = (fE - ESTEP_E[IStep]) / DEDX_E;
+      energy = (ESTEP_E[IStep-1]+ESTEP_E[IStep])/2;
+    }    
+    GeomLength();
+    Range = min(DxStep, GLength);
+    Beta = sqrt(energy*(energy+2*MASS_E))/(energy+MASS_E);
+   
+    break;
+
+  case 3:
+    if (IStep == NSTEP_MU) DxStep=fE/DEDX_MU;
+    else DxStep = (fE - ESTEP_MU[IStep]) / DEDX_MU;
+    GeomLength();
+    Range = min(DxStep, GLength);
+
+    if(IStep>0) energy = (ESTEP_MU[IStep-1]+ESTEP_MU[IStep])/2;
+    else energy = (10.+ESTEP_MU[IStep])/2.;
+    Beta = sqrt(energy*(energy+2*MASS_MU))/(energy+MASS_MU);
+    break;
+
+  default:
+    cerr << "Erreur dans ParticleInTank::ComputeStepParameters..." << endl;                   
+
+  }  
+}
+
+
+/*--------------------------------------------
+-   Simulation of processes in each step.    -
+-                                            -
+-          For Detailed Mode:                -
+-          ------------------                -
+-          * Gamma Simulation:               -
+-            Pair Production                 -
+-            Compton Scattering              -
+-                                            -  
+-          * Electron Simulation:            -
+-            Cherenkov production            -
+-            MultipleScattering              -
+-            Bremsstrahglung                 -
+-            Ionization lost                 -
+-                                            -
+-          * Muon Simulation:                -
+-            Cherenkov production            -
+-            Delta Rays                      -
+-            Muon Decay                      -   
+--------------------------------------------*/
+
+int ParticleInTank::DoProcesses()
+{
+  double probIntInOneStep;
+  double random2011;
+  switch (abs(fId)) {
+
+  case 1:
+   
+    PairProbability();
+    if (GLength < IntLength) return STOP;
+    random2011 = Rand();
+
+    if (random2011 <= ProbPair) {
+      PairProduction();
+      return STOP;
+    } else {
+      ComptonScattering();
+    }
+   
+    break;
+
+  case 2:    
+   
+    if (theConfig()->SimMode == "DETAILED") {
+      if(Range>0) CherPhot(Beta,Range); 
+      MultipleScattering(Beta,Range);
+      probIntInOneStep=gBremTable[IStep][0]*(Range*100);
+      if(Rand()<probIntInOneStep) fE -= Bremstrahlung(IStep,Range,Beta);
+      fE -= Range*DEDX_E;
+      if (Range < DxStep || fE < EMIN_E) return STOP;
+    } else { // fast simulation
+      ;
+    }
+   
+    break;
+
+  case 3:    
+    if (theConfig()->SimMode == "DETAILED") {
+    
+      if(Range>0) CherPhot(Beta,Range);
+      if(DxStep>0) fE -= GenerateDeltaRays(Beta,Range);
+      while(fE < ESTEP_MU[IStep]) {IStep++;}
+      if ( MuonDecay() == 1 ) return STOP;
+    } else { // fast simulation
+      ;
+    }    
+    fE = ESTEP_MU[IStep++];
+    break;
+
+  default:
+    cerr << "Erreur dans ParticleInTank::DoProcesses..." << endl;                   
+  }  
+ 
+  return CONTINUE;
+}
+
+
+/*--------------------------------
+   Propagation in space and time 
+   for each elementar step       
+--------------------------------*/
+
+void ParticleInTank::Propagate()
+{
+  fX += Range*fUX;
+  fY += Range*fUY;
+  fZ += Range*fUZ;
+  fT += Range/(Beta*CLIGHT);
+}
+
+
+
+/*---------------------------------------------------------
+  Photon processes
+---------------------------------------------------------*/
+
+const Double_t kEMinPh = 0.0004;
+const Double_t emass = 0.0005;
+
+// Calcul IntLength et ProbPair, utiles dans DoProcesses
+// photon -> création de paire ? ou Compton ?
+
+void ParticleInTank::PairProbability()
+{
+  if(PrintCout == 1) cout <<"Pair Probability"<<endl;
+  Double_t e_ph;
+  Double_t ph_al;
+  Int_t itab;
+
+  if(fE <= kEMinPh) return;
+
+  // position initiale et direction du photon :
+  e_ph = fE;
+
+  GeomLength();
+  
+  itab = (Int_t)((log10(e_ph) + 4.1)/0.2);
+    if(itab <= 0)  {ph_al = TABINTLENGTH[0]; ProbPair = TABPROBPAIR[0];}
+    else{
+      if(itab >= (NTAB_PHOT-1)) {ph_al = TABINTLENGTH[NTAB_PHOT-1]; ProbPair = TABPROBPAIR[NTAB_PHOT-1];}
+      else{
+        double log10Einf = -4.1 + 0.2 * itab;
+        double log10Esup = -4.1 + 0.2 * (itab+1);
+        ph_al = TABINTLENGTH[itab] + (log10(e_ph) - log10Einf) * (TABINTLENGTH[itab+1] - TABINTLENGTH[itab]) / (log10Esup - log10Einf);
+        ProbPair = TABPROBPAIR[itab] + (log10(e_ph) - log10Einf) * (TABPROBPAIR[itab+1] - TABPROBPAIR[itab]) / (log10Esup - log10Einf);
+      }
+    }
+    
+   IntLength = -log(Rand()) * ph_al;
+
+   return;
+ 
+}
+
+/*-------------------------------------------------------
+  Photon -> paire e-/e+                                 -
+  Calcul des paramètres de ces particules (e_ph, x,y,z) -
+ ------------------------------------------------------*/
+
+void ParticleInTank::PairProduction()
+{
+  Double_t xx,yy,zz,ux,uy,uz,e_ph,timr,weight;
+  Double_t cc;
+  Double_t e1,e2;
+  
+  xx = fX;
+  yy = fY;
+  zz = fZ;
+  ux = fUX;
+  uy = fUY;
+  uz = fUZ;
+  e_ph = fE;
+  timr = fT;
+  weight = fW;
+
+  xx = xx + IntLength * ux;
+  yy = yy + IntLength * uy;
+  zz = zz + IntLength * uz;
+  timr = timr + IntLength / CLIGHT;
+  cc = STATION_RADIUS * STATION_RADIUS - xx * xx - yy * yy;
+
+
+  e1 = (e_ph - 2 * emass) * Rand();
+  e2 = (e_ph - 2 * emass) - e1;
+  
+  
+   ParticleInTank * p1 =
+     new ParticleInTank(fISta,2,fId,xx,yy,zz,fUX,fUY,fUZ,timr,e1,fW);
+   p1->DoDetSim();
+   fNCherPhot += p1->fNCherPhot;
+   for(int iph= 0; iph<p1->fNCherPhot; iph++){
+     fTCherPhot.push_back(p1->fTCherPhot[iph]);
+     fIpm.push_back(p1->fIpm[iph]);
+     fNReflexions.push_back(p1->fNReflexions[iph]);    
+   }
+   delete p1;
+   
+   ParticleInTank * p2=
+     new ParticleInTank(fISta,-2,fId,xx,yy,zz,fUX,fUY,fUZ,timr,e2,fW);
+   p2->DoDetSim();
+   fNCherPhot += p2->fNCherPhot;
+   for(int iph = 0;iph<p2->fNCherPhot;iph++){
+     fTCherPhot.push_back(p2->fTCherPhot[iph]);
+     fIpm.push_back(p2->fIpm[iph]);
+     fNReflexions.push_back(p2->fNReflexions[iph]);
+   }   
+   delete p2;
+  
+}
+
+
+/*---------------------------------------------------------
+  Photon -> effet Compton                                 -
+  Calcul nouveaux paramètres du photon et de l'e- produit -
+ --------------------------------------------------------*/
+
+void ParticleInTank::ComptonScattering()
+{
+  Double_t xx,yy,zz,ux,uy,uz;
+  Double_t hlength;
+  Double_t e_ph, emin,smax,efin,sfin;
+  Double_t c_dth,s_dth,s_dph,c_dph,dph;
+  Double_t uxy,vx,vy,vz,wx,wy,wz;
+  Double_t ux_f=0.,uy_f=0.,uz_f=0.,ux_el,uy_el,uz_el;
+  Double_t e1, p1, aa, bb, cc;
+  Int_t reject;
+
+  xx = fX;
+  yy = fY;
+  zz = fZ;
+  ux = fUX;
+  uy = fUY;
+  uz = fUZ;
+  e_ph = fE;
+  emin = 1/(1/e_ph + 2/emass);
+  smax = emin/e_ph + e_ph/emin + pow((1+emass/e_ph-emass/emin),2) - 1;
+
+  reject = 1;
+  while(reject)
+    {
+      efin = emin + Rand()*(e_ph-emin);
+      sfin = efin/e_ph + e_ph/efin;
+      reject = Rand() > sfin/smax;
+    }
+  e1 = e_ph - efin;
+  
+  // if needed (active photon or electron after scattering) compute final
+  if(e1>EMIN_E || efin> kEMinPh) {
+    //diffusion angles of the photon
+    c_dth = 1 + emass*(1/e_ph-1/efin);
+    s_dth = sqrt(1 - c_dth*c_dth);
+    dph = 2*PI*Rand();
+    c_dph = cos(dph);
+    s_dph = sin(dph);
+    //new direction cosines of the photon
+    uxy = sqrt(ux*ux+uy*uy);
+    if(uxy != 0){
+      vx = -uy/uxy;
+      vy = ux/uxy;
+      vz = 0.;
+      wx = uy*vz-uz*vy;
+      wy = uz*vx-ux*vz;
+      wz = ux*vy-uy*vx;
+    }
+    else
+      {
+	vx = 1;
+	vy = 0;
+	vz = 0;
+	wx = 0;
+	wy = 1;
+	wz = 0;
+      }
+    
+    ux_f = c_dth*ux+s_dth*(c_dph*vx+s_dph*wx);
+    uy_f = c_dth*uy+s_dth*(c_dph*vy+s_dph*wy);
+    uz_f = c_dth*uz+s_dth*(c_dph*vz+s_dph*wz);
+  }
+  //  scattered electron
+  //VERSION 1 :
+  if(e1>EMIN_E) {
+    p1 = sqrt(2*emass*e1 + e1*e1);
+    ux_el = (e_ph*ux - efin*ux_f)/p1;
+    uy_el = (e_ph*uy - efin*uy_f)/p1;
+    uz_el = (e_ph*uz - efin*uz_f)/p1;
+  
+    ParticleInTank * pel=
+      new ParticleInTank(fISta,2,fId,xx,yy,zz,ux_el,uy_el,uz_el,fT,e1,fW);
+    pel->GeomLength();
+    pel->DoDetSim();
+    fNCherPhot += pel->fNCherPhot;
+
+    for(int iph= 0;iph<pel->fNCherPhot;iph++){
+      fTCherPhot.push_back(pel->fTCherPhot[iph]);
+      fIpm.push_back(pel->fIpm[iph]);
+      fNReflexions.push_back(pel->fNReflexions[iph]);
+    }
+    delete pel;
+    
+  }
+  
+  //scattered photon
+   
+  if(efin > kEMinPh)
+    {
+      e_ph = efin;
+      ux = ux_f;
+      uy = uy_f;
+      uz = uz_f;
+    }
+  
+}
+
+
+/*----------------------------------------------------------
+   Muon processes
+----------------------------------------------------------*/
+ 
+Double_t  ParticleInTank::GenerateDeltaRays(Double_t beta, Double_t xstep)
+{
+  // step in m and T in Gev
+  double gamma = 1/sqrt(1.-beta*beta);
+  double Tmax = MASS_E* beta* beta*gamma*gamma;
+  double meanNbDR = DELTARAYCONST*xstep/beta*(1./gTMinForDeltaRays-1./Tmax);
+  int nbDR = (int)Rand("POISSON",meanNbDR);
+  double DE = 0;
+  
+  for(int n=0; n < nbDR; n++)
+    {
+      double invT = 1./gTMinForDeltaRays-Rand()*(1./gTMinForDeltaRays-1./Tmax);
+      double T = 1/invT;
+      double costheta = T/Tmax*sqrt((Tmax*Tmax+2*MASS_E*Tmax)/
+				  (T*T+2*MASS_E*T));
+      
+        
+      // get the distance
+      double dist = xstep*Rand();
+      
+      // orientation of the incident muon in the tank frame
+      double UR = sqrt(fUX*fUX+fUY*fUY);
+      
+      // compute delta ray coordinates
+      double dr_x = fX + dist * fUX;
+      double dr_y = fY + dist * fUY;
+      double dr_z = fZ + dist * fUZ;
+      double time = fT + dist/(CLIGHT*beta);
+      
+      // compute the orientation in the muon frame
+      double sintheta = sqrt(1-costheta*costheta);
+      double phi = 2*PI*Rand();
+      double cosphi = cos(phi);
+      double sinphi = sin(phi);
+      double ux = sintheta*cosphi;
+      double uy = sintheta*sinphi;
+      double uz = costheta;
+      int dr_id = 2;
+      double dr_ux;
+      double dr_uy;
+      double dr_uz;
+      if(UR!=0) // muon non purely vertical
+	{
+	  dr_ux = (ux*fUZ*fUX-uy*fUY)/UR+uz*fUX;
+	  dr_uy = (ux*fUZ*fUY+uy*fUX)/UR+uz*fUY;
+	  dr_uz = -UR*ux+fUZ*uz;
+	}
+      else
+	{
+	  dr_ux = ux;
+	  dr_uy = uy;
+	  if(fUZ>0) dr_uz = uz;
+	  else   dr_uz = -uz;
+	}
+      
+	double norm = sqrt(dr_ux*dr_ux+dr_uy*dr_uy+dr_uz*dr_uz);
+	
+	double dr_E = T+MASS_E;
+	
+	
+	double radius = sqrt(dr_x*dr_x+dr_y*dr_y);
+	if( (dr_z>0) && (dr_z<STATION_HEIGHT)*(1-EPSILON)  && radius <STATION_RADIUS*(1-EPSILON) )
+	  
+	  {
+	    ParticleInTank* p1 = new ParticleInTank(fISta,dr_id,fId,dr_x,dr_y,dr_z,dr_ux/norm,
+						    dr_uy/norm,dr_uz/norm,time,dr_E,fW);
+	    p1->DoDetSim();
+	    fNCherPhot += p1->fNCherPhot;
+	    
+	    for(int iph=0; iph<p1->fNCherPhot; iph++){
+	      fTCherPhot.push_back(p1->fTCherPhot[iph]);
+	      fIpm.push_back(p1->fIpm[iph]);
+	      fNReflexions.push_back(p1->fNReflexions[iph]);
+	    }
+	    delete p1;
+	    
+	    DE+=T;
+	  }
+    }
+  
+  return DE;
+}
+
+double FuncDistribThetaCM(double x, double rand)
+{
+  return M_PI*rand-x-sin(x);
+}
+
+
+int ParticleInTank::MuonDecay()
+{
+  return 0;
+}
+
+
+/*----------------------------------------------------------
+  Electron processes
+----------------------------------------------------------*/
+ 
+Double_t  ParticleInTank::Bremstrahlung(Int_t istep,Double_t dxstep,Double_t beta){
+  double pb;
+  double EFrac, GammaKE;
+  double brE ;
+  pb = Rand();
+  int ind = 0;
+  for(int i=1; i<NDIV; i++)
+    {
+      if(gBremTable[istep][i]>pb)
+        {ind=i; break;}
+    }
+  EFrac = (double)ind/(double)NDIV;
+  GammaKE = fE*EFrac;
+  
+  // Determine approx RMS gamma emission angle
+  // (ref Rossi page 53 with q factor=1)
+  // In fact angles are small compared to scattering so no problem
+  
+  double mom2 = fE*(fE+2*MASS_E);
+  double sig2 = pow(.0136/beta,2) / mom2 * dxstep/.361;
+  double urandom=Rand();
+  while(urandom==0)
+    urandom=Rand();
+  double theta = sqrt(-2*sig2*log(urandom));
+  double costh = cos(theta);
+  double sinth = sqrt(1-costh*costh);
+  double phi = 2*PI * Rand();
+  double cosph = cos(phi);
+  double sinph = sin(phi);
+  
+  if(GammaKE>EMINBREM*dxstep)
+    {
+      // Calculate the vector components of daughter direction
+      // and rotate ref frame such that z axis lies along old ptcle track
+      double ur = sqrt(fUX*fUX+fUY*fUY);
+      double vx,vy,wx,wy,wz;
+      if(ur!=0)
+        {
+          vx = -fUY/ur;
+          vy =  fUX/ur;
+          wx = -fUZ*vy;
+          wy = fUZ*vx;
+          wz = fUX*vy-fUY*vx;
+        }
+      else
+        {
+          vx = 1;
+          vy = 0;
+          wx = 0;
+          wy = 1;
+          wz = 0;
+        }
+      
+      // new direction 
+      double brUX = costh * fUX + sinth * (cosph*vx+sinph*wx);
+      double brUY = costh * fUY + sinth * (cosph*vy+sinph*wy);
+      double brUZ = costh * fUZ + sinth * (sinph*wz);
+      
+      double brX = fX;
+      double brY = fY;
+      double brZ = fZ;
+      int brId = 1;
+      double brT = fT ;
+      double brW = fW;
+      brE = GammaKE;
+      
+      ParticleInTank* p1 = new ParticleInTank(fISta,brId,fId,brX,brY,brZ,
+                                              brUX,brUY,brUZ,brT,brE,brW);
+
+      p1->DoDetSim();
+      fNCherPhot += p1->fNCherPhot;
+      for(int iph= 0;iph<p1->fNCherPhot;iph++){
+        fTCherPhot.push_back(p1->fTCherPhot[iph]);
+        fIpm.push_back(p1->fIpm[iph]);
+        fNReflexions.push_back(p1->fNReflexions[iph]);
+      }
+      delete p1;
+    }
+  else
+    brE = 0;
+  
+  return(brE);
+}
+ 
+
+
+void ParticleInTank::MultipleScattering(Double_t beta,Double_t xstep)
+{
+  double mom2 = fE*(fE+2*MASS_E);
+  double sig2 = pow(.0136/beta,2) / mom2 * xstep/.361;
+  double urandom = Rand();
+  while(urandom==0) urandom=Rand();
+  double theta = sqrt(-2*sig2*log(urandom));
+  double costh = cos(theta);
+  double sinth = sqrt(1-costh*costh);
+  double phi = 2*PI * Rand();
+  double cosph = cos(phi);
+  double sinph = sin(phi);
+  // construction of two unit vectors perp. to the initial direction
+  // (vx,vy,0) and (wx,wy,wz)
+  double ur = sqrt(fUX*fUX+fUY*fUY);
+  
+  double vx,vy,wx,wy,wz;
+  if(ur!=0)
+    {
+      vx = -fUY/ur;
+      vy =  fUX/ur;
+      wx = -fUZ*vy;
+      wy = fUZ*vx;
+      wz = fUX*vy-fUY*vx;
+    }
+  else
+    {
+      vx = 1;
+      vy = 0;
+      wx = 0;
+      wy = 1;
+      wz = 0;
+    }
+  
+  // new direction
+  fUX = costh * fUX + sinth * (cosph*vx+sinph*wx);
+  fUY = costh * fUY + sinth * (cosph*vy+sinph*wy);
+  fUZ = costh * fUZ + sinth * (sinph*wz);
+  
+}
+
+ 
+
+/*----------------------------------------------------------
+  Cherenkov production
+----------------------------------------------------------*/
+ 
+void ParticleInTank::CherPhot(Double_t beta,Double_t range)
+{
+  Double_t vx,vy,vz,wx,wy,wz,uxy;
+  Double_t costh_cher,sinth_cher;
+  Double_t alph,calph,salph;
+  Double_t cx,cy,cz;
+  Double_t cx_ph,cy_ph,cz_ph,x_ph,y_ph,z_ph,r_ph;
+  Double_t prb,prb_refdif,prb_spec,abslen;
+  Int_t n,nphot,ipm;
+  nphot = 0;
+  cx = fUX;
+  cy = fUY;
+  cz = fUZ;
+
+  uxy = sqrt(fUX*fUX+fUY*fUY);
+
+  if(uxy > 0.)
+    {
+      vx = -fUY/uxy;
+      vy = fUX/uxy;
+    }
+  else
+    {
+      vx = 1.;
+      vy = 0.;
+    }
+
+  vz = 0.;
+  wx = fUY*vz-fUZ*vy;
+  wy = fUZ*vx-fUX*vz;
+  wz = fUX*vy-fUY*vx;
+
+  // Cherenkov effect:
+  costh_cher = 1./(WATINDEX*beta);
+  if(costh_cher>1)return;
+
+  sinth_cher = sqrt(1-costh_cher*costh_cher);
+  Double_t nn = (gCherFact*sinth_cher*sinth_cher*range*fW);
+  n = (Int_t)nn;
+  if(Rand()<nn-n) n++;
+
+  for(Int_t i=0; i<n; i++)
+    {
+      // direction of emission
+      alph = 2*PI*Rand();
+      calph = cos(alph);
+      salph = sin(alph);
+      cx_ph = costh_cher*fUX + sinth_cher * (calph*vx+salph*wx);
+      cy_ph = costh_cher*fUY + sinth_cher * (calph*vy+salph*wy);
+      cz_ph = costh_cher*fUZ + sinth_cher * (salph*wz);
+
+      // point of emission
+      r_ph = range*Rand();
+      x_ph = fX + r_ph*cx;
+      y_ph = fY + r_ph*cy;
+      z_ph = fZ + r_ph*cz;
+
+      double wav,qe;
+      int iwa = 0;
+
+      // wavelength and absorption properties at this wavelength
+      prb = Rand();
+      for(Int_t j=0; j<NWAVEL; j++)
+        {
+	  if(prb < gCherPrb[j]) {
+            iwa = j;
+            break;
+          }
+        }
+      int deb = 0;
+      if(iwa>0) {
+	wav = (WAVELMIN+(iwa+.5)*DWAVEL)*1.e9;
+	prb_refdif = LINABSMAX * RELLINABS[iwa];
+	abslen = WATABSLENMAX * RELWATABSLEN[iwa];
+	prb_spec = SPECFRACMAX * RELSPECFRAC[iwa];
+	
+	qe = PMTQE[iwa];
+      }
+      else
+        {
+          deb = 1;
+          wav = (WAVELMIN+(iwa+.5) * DWAVEL) * 1.e9;
+          prb_refdif = LINABSMAX * RELLINABS[iwa];
+          abslen = WATABSLENMAX *  RELWATABSLEN[iwa];
+          prb_spec = SPECFRACMAX * RELSPECFRAC[iwa];
+	  qe = PMTQE[iwa]; 
+        }
+      
+      // following a Cherenkov photon
+      ipm = this->Follow(x_ph,y_ph,z_ph,cx_ph,cy_ph,cz_ph,
+			 prb_refdif,prb_spec,abslen);
+      if(ipm>0) { nphot++;}
+
+    }
+  
+  fNCherPhot += nphot;
+}
+
+
+
+/*----------------------------------------------------------
+  Follow particle until PM
+  --------------------------------------------------------*/
+
+Int_t ParticleInTank::Follow(Double_t x,Double_t y,Double_t z,
+			     Double_t cosx,Double_t cosy,Double_t cosz,
+			     Double_t prb_refdif,Double_t prb_spec,
+			     Double_t abslen)
+{
+  Double_t zc_pm;
+  Double_t xx,yy,zz,cxx,cyy,czz,norm,prod;
+  Double_t aa,bb,cc,glength,zs;
+  Double_t c2bet,cbet,sbet,alph,calph,salph;
+  Int_t active;
+  Double_t zhit;
+  Int_t ipm;
+  Double_t tlength;
+  
+  zc_pm = STATION_HEIGHT+HC_PM;
+  
+  ipm = 0;
+  tlength = 0.;
+  xx = x;
+  yy = y;
+  zz = z;
+  cxx = cosx;
+  cyy = cosy;
+  czz = cosz;
+  norm = sqrt(cxx*cxx+cyy*cyy+czz*czz);
+  cxx = cxx/norm;
+  cyy = cyy/norm;
+  czz = czz/norm;
+  // prb_spec=0.1;
+  active = 1;
+  Int_t ind;
+  ind = 0;
+
+  // computation of geometric length
+  while(active)
+    {
+      aa = cxx*cxx+cyy*cyy;
+      bb = xx*cxx+yy*cyy;
+      cc = STATION_RADIUS*STATION_RADIUS-xx*xx-yy*yy;
+      glength = (-bb+sqrt(bb*bb+aa*cc))/aa;
+      zs = zz+glength*czz;
+
+      // side wall  -------------------------------------
+      if(zs > 0.&& zs < STATION_HEIGHT) {
+	
+        // absorption in water or in wall
+        active = Rand() < exp(-glength/abslen);
+        active = active && Rand()< prb_refdif;
+
+        if(active) {
+          xx += glength*cxx;
+          yy += glength*cyy;
+          zz = zs;
+          tlength += glength;
+          ind++;
+          //  Double_t intheta= acos(STATION_HEIGHT/tlength)*RAD2DEG;
+          /*   geometry of reflection/diffusion unit vectors (w.r.t. surface)
+               normal  n  : -xx/STATION_RADIUS  -yy/STATION_RADIUS   0
+               tangent t1 :  yy/STATION_RADIUS  -xx/STATION_RADIUS   0
+               t2 :         0               0                1  */
+	  
+          // specular reflection
+          if(Rand() < prb_spec)
+            {
+              prod = (xx*cxx+yy*cyy)/STATION_RADIUS;
+              cxx += -2*prod*xx/STATION_RADIUS;
+              cyy += -2*prod*yy/STATION_RADIUS;
+	      
+
+              // diffusion (sinus.cosinus law -->  uniform distr. in cos(2*th)
+            }
+          else
+            {
+              c2bet = 2*Rand()-1;
+              cbet = sqrt((1+c2bet)/2);
+              sbet = sqrt((1-c2bet)/2);
+              alph = 2*Rand()*PI;
+              calph = cos(alph);
+              salph = sin(alph);
+              cxx = (-cbet*xx+sbet*salph*yy)/STATION_RADIUS;
+              cyy = (-cbet*yy-sbet*salph*xx)/STATION_RADIUS;
+              czz = sbet * calph;
+	    }
+          
+        }//end active
+      }//end side wall
+      
+      //  top wall -----------------------------------------
+      else
+        if(czz > 0.) {
+          glength = (STATION_HEIGHT-zz)/czz;
+          active = Rand() < exp(-glength/abslen);
+	  
+          if(active) {
+            xx += glength*cxx;
+            yy += glength*cyy;
+            zz = STATION_HEIGHT;
+            tlength += glength;
+	    
+	    
+            //  PMT simulation portion of a semisphere PMT
+            //  PMT entry ?
+            for(Int_t j=0;j<NPM;j++){
+              bb = cxx*(xx-X_PM[j])+cyy*(yy-Y_PM[j])+czz*(zz-zc_pm);
+              cc = RAD_PM * RAD_PM - pow((xx-X_PM[j]),2) - pow((yy-Y_PM[j]),2)
+                -pow((zz-zc_pm),2);
+	      
+              if(bb*bb+cc >0.)
+                {
+                  zhit = zz-(bb+sqrt(bb*bb +cc))*czz;
+                  if(zhit <= STATION_HEIGHT &&
+                     zhit >( STATION_HEIGHT + HC_PM-RAD_PM))
+                    {
+                      ipm = j+1;
+                      fTCherPhot.push_back(tlength*WATINDEX/CLIGHT+fT);
+                      fIpm.push_back(ipm);
+                      fNReflexions.push_back(ind);
+		      return(ipm);
+                    }
+                }
+            }//loop on PMT
+
+            ind++;
+	    
+            // no PMT entry
+            active = Rand() < TOP_FACT * prb_refdif;
+            if(active){
+              // specular reflection
+
+              if(Rand() < prb_spec)
+                czz=-czz;
+              else
+                // diffusion (sinus.cosinus law -->  uniform distr. in cos(2*th)
+                {
+                  c2bet = 2*Rand()-1;
+                  sbet = sqrt((1-c2bet)/2);
+                  alph = Rand() * 2 * PI;
+                  cxx = sbet * cos(alph);
+                  cyy = sbet * sin(alph);
+                  czz = -sqrt((1+c2bet)/2);
+                }
+             
+            }//end active
+	    
+          }//end active
+	  
+        }//end top
+      
+      // bottom wall ---------------------------------------
+      
+	else {
+	  
+          glength = -zz/czz;
+          active = Rand()< exp(-glength/abslen);
+          active = active && Rand() < prb_refdif;
+	  if(active){
+            xx += glength*cxx;
+            yy += glength*cyy;
+            zz=0.;
+            tlength += glength;
+            ind++;
+            Double_t spec = Rand();
+	    if(spec < prb_spec){
+              czz=-czz;
+             }
+            else
+              // diffusion (sinus.cosinus law -->  uniform distr. in cos(2*th))
+              {
+                c2bet = 2*Rand()-1;
+                sbet = sqrt((1-c2bet)/2);
+                alph = Rand()*2*PI;
+                cxx = sbet * cos(alph);
+                cyy = sbet * sin(alph);
+                czz = sqrt((1+c2bet)/2);
+	      }
+	    
+          }//end active
+	  
+        }//end bottom */
+    }
+  return(ipm);
+}
+
+
+
+
+
+
+
+//------------------------------------------------------------------------//
+//------------------------------------------------------------------------//
+//------------------------ ED DETECTOR -----------------------------------//
+//------------------------------------------------------------------------//
+//------------------------------------------------------------------------//
+
+
+
+
+/*-------------------------------------------------         
+  class ParticleInScint                           -
+                                                  -
+  * Gamma :                                       -
+  No interaction (thinckness 1.5 cm)              -
+  Pair production -> all energy deposited         -
+  Compton scattering -> use Geant 4 stat.         -
+                                                  -
+  * Muon / Electron :                             -
+  Formula of Bethe & Bloch                        -
+                                                  -
+------------------------------------------------- -
+  For Detailed Mode:                              -
+                                                  -
+  * Muon Simulation:                              -
+  Bethe & Bloch (use Leo formula)                 -
+                                                  -
+  * Electron Simulation:                          -
+  Bethe & Bloch modified for electron (Leo)       -
+                                                  -
+  * Gamma Simulation:                             -
+  Proba interaction                               -
+  Proba processes (3 processes) :
+  Interaction : - Compton effect (use Geant 4)    -
+                - Pair Production (all deposited) -
+                - Photoelectric Effect (Geant4)   - 
+                                                  -
+-------------------------------------------------*/
+
+ParticleInScint::ParticleInScint()
+{
+
+}
+
+ParticleInScint::ParticleInScint (Int_t ist,Int_t id,double x,double y,double z, 
+				double cx,double cy,double cz,double tim,double en,double weight)
+  //  : Particle(id, 0,0,0, tim, en, cx, cy, cz)
+{
+  fId = id;
+  fUX = cx;
+  fUY = cy;
+  fUZ = cz;
+  fT = tim;
+  fE = en;
+  WhereAmI = 0;
+  fISta = ist;
+  fX = x;
+  fY = y;
+  fZ = z;
+  fW = weight;
+  GLength = 0;
+  ProbNoInt = 0;
+  ProbIntLead = 0;
+  ProbPair = 0;
+  fNPhot = 0;
+  fIpm = 0;
+  fBinContent.clear();
+}
+
+ParticleInScint::ParticleInScint (Int_t ist,Int_t id,Int_t motherid,double x,double y,double z,double cx,double cy,double cz,double tim,double en,double weight)
+  //  : Particle(id, 0,0,0, tim, en, cx, cy, cz)
+{
+  fId = id;
+  fMotherId =  motherid;
+  fUX = cx;
+  fUY = cy;
+  fUZ = cz;
+  fT = tim;
+  fE = en;
+  WhereAmI = 0;
+  fISta = ist;
+  fX = x;
+  fY = y;
+  fZ = z;
+  fW = weight;
+  GLength = 0;
+  ProbNoInt = 0;
+  ProbIntLead = 0;
+  ProbPair = 0;
+  fNPhot = 0;
+  fIpm = 0;
+  fBinContent.clear();
+}
+
+ParticleInScint::~ParticleInScint()
+{
+
+}
+
+
+/*-------------------------------------------
+ -   DETECTOR SIMULATION FOR EACH PARTICLE  -
+ ------------------------------------------*/
+
+
+/* --------------------------------------------------------
+-  Manager of the step by step propagation of each        -
+-  particle in a scintillator / lead.                     -
+-  In each step, determine the length, the loss of energy -
+-  and generate photons.                                  -
+---------------------------------------------------------*/
+
+void ParticleInScint::DoEDSim()  
+{
+  Double_t randomIntScint, randomIntLead, randomProcess;
+  Double_t xx, yy, zz, ux, uy, uz, x_out, y_out, z_out;
+  if(PrintCout == 1) cout << "\n DoEDSim" << endl;
+
+  // GAMMAS
+    if (abs(fId) == 1)
+    {
+      if(PrintCout == 1) cout << "GAMMA (fId,fX,fY,fZ,fUX,fUY,fUZ,fT" << endl;
+      if(PrintCout == 1) 
+	cout << fId << ", " << fX << ", " << fY << ", " << fZ << ", " << fUX << ", " << fUY << ", " << fUZ << ", " << fT << endl;
+      // ED = LEAD + SCINTILLATOR :
+      if(theConfig()->EDMode == "Pb&Scint")
+	{
+	  // In Lead :
+	  WhereAmI = 1; // In lead
+	  GeomLengthLead();
+	  InteractionProbabilityInLead();
+	  randomIntLead = Rand();
+	  if (randomIntLead < ProbIntLead)
+	    {
+	      ProbabilityProcess();
+	      DoGammaProcesses_Lead();
+	    }
+
+	  // In Scintillator :
+	  WhereAmI = 2; // In scintillator
+	  PositionEnterScint();
+	  GeomLengthScint();
+	  InteractionProbabilityInScint();
+	  randomIntScint = Rand();
+	  if (randomIntScint > ProbNoInt)
+	    {
+	      PairProbability();
+	      DoGammaProcesses_Scint();
+	    }
+	}
+      
+      // ED = SCINTILLATOR :
+      else if(theConfig()->EDMode == "Scint")
+	{
+	  WhereAmI = 2; // In scintillator
+	  GeomLengthScint();
+	  InteractionProbabilityInScint();
+	  randomIntScint = Rand();
+	  if (randomIntScint > ProbNoInt)
+	    {
+	      PairProbability();
+	      DoGammaProcesses_Scint();
+	    }	
+	}   
+    }
+
+// ELECTRON & MUONS
+ else if ( (abs(fId) == 2) || (abs(fId) == 3) ) 
+   {
+     if(PrintCout == 1) cout << "ELECTRON OU MUON" << endl;
+     if(theConfig()->EDMode == "Pb&Scint")
+       {
+	  GeomLengthLead(); 
+	  EnergyLossInLead();
+	  EnergyLossInScint(); 
+	  GeneratePhoton();
+       }
+     else if(theConfig()->EDMode == "Scint")
+	{
+	  GeomLengthScint(); 
+	  EnergyLossInScint(); 
+	  GeneratePhoton();
+	}
+    }
+ else return;
+}
+
+
+  /*------------------------------------
+  - Computes the distance between the  -
+  - particle and the scintillator.     -
+  ------------------------------------*/
+void ParticleInScint::GeomLengthLead()
+{
+  if(PrintCout == 1) cout << "GeomLength in Lead !" << endl;
+  Double_t aa,bb,cc;
+  aa = fUX*fUX + fUY*fUY;
+  bb = fX*fUX + fY*fUY;
+  cc = LEAD_RADIUS*LEAD_RADIUS - fX*fX - fY*fY;
+  //   length up to the external volume
+  if(aa != 0) GLength = (-bb + sqrt(bb*bb + cc*aa))/aa;
+  else GLength = INFINITY;
+  //   length up to the top or the bottom
+  if(fUZ<0) GLength = min(GLength,-fZ/fUZ);
+  else if(fUZ != 0)         
+     GLength = min(GLength,(LEAD_HEIGHT-fZ)/fUZ);
+   else  GLength = 2 * (fX*fUX + fY*fUY);
+
+  if(PrintCout == 1) cout << "GLength in Lead = " << GLength << endl;
+  return;
+}
+
+void ParticleInScint::GeomLengthScint()
+{
+  if(PrintCout == 1) cout << "GeomLength in Scintillator !" << endl;
+  Double_t aa,bb,cc;
+  aa = fUX*fUX + fUY*fUY;
+  bb = fX*fUX + fY*fUY;
+  cc = SCINT_RADIUS*SCINT_RADIUS - fX*fX - fY*fY;
+  //   length up to the external volume
+  if(aa != 0) GLength = (-bb + sqrt(bb*bb + cc*aa))/aa;
+  else GLength = INFINITY;
+  //   length up to the top or the bottom
+  if(fUZ<0) GLength = min(GLength,-fZ/fUZ);
+  else if(fUZ != 0)         
+     GLength = min(GLength,(SCINT_HEIGHT-fZ)/fUZ);
+   else  GLength = 2 * (fX*fUX + fY*fUY);
+ 
+  if(PrintCout == 1) cout << "GLength in Scint= " << GLength << endl;
+  return;
+}
+
+
+  /*----------------------------------------------------------
+  -                     FOR GAMMAS                           - 
+  -                                                          -
+  - A/ ED composed of Lead & Scintillator :                  -
+  -    1) Compute the probability to do an interaction       -
+  -    in lead.                                              -
+  -    2) Probability to do a Pair/Compton/Photolectic       -                  
+  -    with a random interaction length                      -
+  -    3.a) If pair production -> create e+/e-               -
+  -    ---> New coord. -> DoEDSim. 1/ Pb puis 2/ Scint       -
+  -    3.b) If compton effect -> compute new gamma & e-      -
+  -    ---> New coord. -> DoEDSim.
+  -    3.c) If photoelectric -> new e- (less El)             -
+  -                                                          -
+  - B/ ED composed only with Scintillator :                  -
+  -    1) Compute the probability to do an interaction       -
+  -    in scintillator.                                      -
+  -    2) Probability to do a Pair/Compton                   -
+  -    3.a) If pair production -> all energy deposited       -
+  -    3.b) If compton effect -> compute                     -
+  -                                                          -
+  -  ---------------------------------------------------------*/
+
+
+
+
+///////////////////////////////////////
+// PROBABILITY TO INTERACT IN LEAD ? //
+///////////////////////////////////////
+
+void ParticleInScint::InteractionProbabilityInLead()
+{
+  if(PrintCout == 1) cout << "InteractionProbabilityInLead" << endl;
+  Double_t GammaEnergy = fE;
+  Int_t itab;
+  
+  itab = (Int_t)((log10(GammaEnergy) + 4.1)/0.2);
+  if(itab <= 0) { ProbIntLead = TABINTERACT_Pb[0]; }
+  else 
+    {
+    if(itab >= (NTAB_PHOT-1)) {ProbIntLead = TABINTERACT_Pb[NTAB_PHOT-1];}
+     else{
+       double log10Einf = -4.1 + 0.2 * itab;
+       double log10Esup = -4.1 + 0.2 * (itab+1);
+       ProbIntLead = TABINTERACT_Pb[itab] + (log10(GammaEnergy) - log10Einf) * (TABINTERACT_Pb[itab+1] - TABINTERACT_Pb[itab]) / (log10Esup - log10Einf);
+     }
+    }
+}
+
+/////////////////////////////////////////////// 
+// IF INTERACT IN THE LEAD : PROBA PROCESS ? //
+///////////////////////////////////////////////
+
+void ParticleInScint::ProbabilityProcess()
+{
+  if(PrintCout == 1) cout << "ProbabilityProcess" << endl;
+  Double_t GammaEnergy = fE;
+  Int_t itab;
+  
+  itab = (Int_t)((log10(GammaEnergy) + 4.1)/0.2);
+  if(itab <= 0) 
+    { 
+      ProbPairLead = TABPROBPAIR_Pb[0]; 
+      ProbComptLead = TABPROBCOMPT_Pb[0];
+      ProbPhotLead = 1 - ProbPairLead - ProbComptLead;
+    }
+  else if(itab >= (NTAB_PHOT-1))  
+    { 
+      ProbPairLead = TABPROBPAIR_Pb[NTAB_PHOT-1];
+      ProbComptLead = TABPROBCOMPT_Pb[NTAB_PHOT-1];
+      ProbPhotLead = 1 - ProbPairLead - ProbComptLead;
+    }
+  else
+    {
+     double log10Einf = -4.1 + 0.2 * itab;
+     double log10Esup = -4.1 + 0.2 * (itab+1);
+     ProbPairLead = TABPROBPAIR_Pb[itab] + (log10(GammaEnergy) - log10Einf) * (TABPROBPAIR_Pb[itab+1] - TABPROBPAIR_Pb[itab]) / (log10Esup - log10Einf);
+     ProbComptLead = TABPROBCOMPT_Pb[itab] + (log10(GammaEnergy) - log10Einf) * (TABPROBCOMPT_Pb[itab+1] - TABPROBCOMPT_Pb[itab]) / (log10Esup - log10Einf);
+     ProbPhotLead = 1 - ProbPairLead - ProbComptLead;
+   }
+}
+
+
+
+/////////////////////////////////////////////// 
+// IF INTERACT IN THE LEAD : WHICH PROCESS ? //
+///////////////////////////////////////////////
+
+void ParticleInScint::DoGammaProcesses_Lead()
+{
+  if(PrintCout == 1) cout << "DoGammaProcesses_Lead" << endl;
+  double randomProcess, InteractionLength;
+  randomProcess = Rand();
+
+  if(PrintCout == 1) cout << "randomProcess = " << randomProcess << " & ProbPairLead = " << ProbPairLead << " & ProbComptLead = " << ProbComptLead << endl;
+  
+  if (randomProcess <= ProbPairLead)
+    PairProduction();
+  else if (ProbPairLead < randomProcess && randomProcess <= ProbPairLead + ProbComptLead)
+    ComptonScattering();
+  else if (randomProcess > ProbPairLead + ProbComptLead)
+    PhotoElectricEffect();
+  else
+    cout 
+      << "###################### ERROR #####################\n ######## NO PROCESS CHOSEN FOR THIS GAMMA ######## \n ##################################################" << endl;
+}
+
+
+
+
+///////////////////////////////////////////////////////
+// NEW POSITION WHEN GAMMA REACHES THE SCINTILLATOR  //
+///////////////////////////////////////////////////////
+
+void ParticleInScint::PositionEnterScint()
+{
+  Double_t xx, yy, zz, ux, uy, uz, x_out, y_out, z_out, timr, distance;
+
+  /* Calculate new position when reaches scintillator
+     1/ Position of particle in lead (xx,yy,zz,ux,uy,uz) */
+  xx = fX;
+  yy = fY;
+  zz = fZ;
+  ux = fUX;
+  uy = fUY;
+  uz = fUZ;
+  
+  // 2/ Position of exit point from bottom of lead
+  x_out = xx + ((- LEAD_HEIGHT/2 - zz)/uz) * ux;
+  y_out = yy + ((- LEAD_HEIGHT/2 - zz)/uz) * uy;
+  z_out = LEAD_HEIGHT/2; 
+
+  // 3/ Distance between initial point and exit point
+  distance = sqrt( (x_out-xx)*(x_out-xx) + (y_out-yy)*(y_out-yy) + (z_out-zz)*(z_out-zz) );
+	  
+  // 4/ Condition on the position of exit point & new coord.
+  if ( z_out == - LEAD_HEIGHT/2 && x_out >= - LEAD_RADIUS && x_out <= LEAD_RADIUS && y_out >= - LEAD_RADIUS && y_out <= LEAD_RADIUS) 
+    {
+      xx = x_out;
+      yy = y_out;
+      zz = SCINT_HEIGHT/2;
+      timr = timr + distance/CLIGHT;
+    }
+
+ParticleInScint * p1 =
+  new ParticleInScint(fISta,fId,xx,yy,zz,fUX,fUY,fUZ,timr,fE,fW);
+   p1->DoEDSim();
+ 
+   delete p1;
+}
+
+
+
+
+///////////////////////////////////////////////////
+// PROBABILITY TO INTERACT IN THE SCINTILLATOR ? //
+///////////////////////////////////////////////////
+
+void ParticleInScint::InteractionProbabilityInScint()
+{
+  if(PrintCout == 1) cout << "InteractionProbabilityInScint" << endl;
+  Double_t GammaEnergy = fE;
+  Int_t itab;
+  
+  itab = (Int_t)((log10(GammaEnergy) + 4.1)/0.2);
+  if(itab <= 0) { ProbNoInt = TABNOINTERACT[0]; }
+  else {
+    if(itab >= (NTAB_PHOT-1)) {ProbNoInt = TABNOINTERACT[NTAB_PHOT-1];}
+     else{
+       double log10Einf = -4.1 + 0.2 * itab;
+       double log10Esup = -4.1 + 0.2 * (itab+1);
+       ProbNoInt = TABNOINTERACT[itab] + (log10(GammaEnergy) - log10Einf) * (TABNOINTERACT[itab+1] - TABNOINTERACT[itab]) / (log10Esup - log10Einf);
+     }
+  }
+}
+
+
+
+///////////////////////////////////// 
+// IF INTERACT IN THE SCINTILLATOR //
+/////////////////////////////////////
+
+void ParticleInScint::DoGammaProcesses_Scint()
+{
+  if(PrintCout == 1) cout << "DoGammaProcesses_Scint" << endl;
+  double randomPair = Rand();
+  if(PrintCout == 1) cout << "randomPair = " << randomPair << " & ProbPair = " << ProbPair << endl;
+  if (randomPair <= ProbPair)
+    PairProduction(); 
+  else 
+    ComptonScattering();
+  
+  GeneratePhoton();
+}
+
+
+///////////////////////////////////////////
+// PROBABILITY TO DO A PAIR PRODUCTION ? //
+//         (only in scintillator)        //
+///////////////////////////////////////////
+
+void ParticleInScint::PairProbability()
+{
+  if(PrintCout == 1) cout << "PairProbability" << endl;
+  Int_t itab;
+  Double_t GammaEnergy = fE;
+  
+  if(GammaEnergy <= kEMinPh) return;
+  
+  itab = (Int_t)((log10(GammaEnergy) + 4.1)/0.2);
+  if(itab <= 0)  { ProbPair = TABPROBPAIR_Scint[0];}
+  else{
+    if(itab >= (NTAB_PHOT-1)) { ProbPair = TABPROBPAIR_Scint[NTAB_PHOT-1];}
+    else{
+      double log10Einf = -4.1 + 0.2 * itab;
+      double log10Esup = -4.1 + 0.2 * (itab+1);
+      ProbPair = TABPROBPAIR_Scint[itab] + (log10(GammaEnergy) - log10Einf) * (TABPROBPAIR_Scint[itab+1] - TABPROBPAIR_Scint[itab]) / (log10Esup - log10Einf);
+    }
+  }
+  
+  return;
+}
+ 
+
+///////////////////////////////////////////////////
+//          -----> PROCESSES                     //
+///////////////////////////////////////////////////
+
+
+////////////////////////////////////////////
+// IF PAIR PRODUCTION, ENERGY DEPOSITED ? //
+////////////////////////////////////////////
+
+void ParticleInScint::PairProduction()
+{
+  if(PrintCout == 1) cout << "PairProduction" << endl;
+  Double_t xx,yy,zz,ux,uy,uz,e_ph,timr,weight;
+  Double_t cc;
+  Double_t e1,e2;
+  Double_t IntLength = Rand();
+ 
+  xx = fX;
+  yy = fY;
+  zz = fZ;
+  ux = fUX;
+  uy = fUY;
+  uz = fUZ;
+  e_ph = fE;
+  timr = fT;
+  weight = fW;
+  
+  xx = xx + IntLength * ux;
+  yy = yy + IntLength * uy;
+  zz = zz + IntLength * uz;
+  timr = timr + IntLength / CLIGHT;
+  if (WhereAmI == 1)
+    cc = LEAD_RADIUS*LEAD_RADIUS - xx*xx - yy*yy;
+  else if (WhereAmI == 2)
+    cc = SCINT_RADIUS*SCINT_RADIUS - xx*xx - yy*yy;
+  else
+    cout << "!!!!!!!!!!!!! ON EST NULLE PART !!!!!!!!!!" << endl;
+  e1 = (e_ph - 2*me) * Rand();
+  e2 = (e_ph - 2*me) - e1;
+  
+  
+   ParticleInScint * p1 =
+     new ParticleInScint(fISta,2,fId,xx,yy,zz,fUX,fUY,fUZ,timr,e1,fW);
+   p1->DoEDSim();
+ 
+   delete p1;
+   
+   ParticleInScint * p2=
+     new ParticleInScint(fISta,-2,fId,xx,yy,zz,fUX,fUY,fUZ,timr,e2,fW);
+   p2->DoEDSim();
+ 
+   delete p2;
+   
+}
+
+
+///////////////////////////////////////////////
+// IF COMPTON SCATTERING, ENERGY DEPOSITED ? //
+///////////////////////////////////////////////
+
+void ParticleInScint::ComptonScattering()
+{
+  if(PrintCout == 1) cout << "ComptonScattering" << endl;
+  // me = electron mass in MeV = 0.511
+  Double_t GammaEnergy;
+  Double_t xx,yy,zz,ux,uy,uz;
+  Double_t hlength;
+  Double_t emin,smax,efin,sfin;
+  Double_t c_dth,s_dth,s_dph,c_dph,dph;
+  Double_t uxy,vx,vy,vz,wx,wy,wz;
+  Double_t ux_f=0.,uy_f=0.,uz_f=0.,ux_el,uy_el,uz_el;
+  Double_t e1, p1, aa, bb, cc;
+  Int_t reject;
+  
+  xx = fX;
+  yy = fY;
+  zz = fZ;
+  ux = fUX;
+  uy = fUY;
+  uz = fUZ;
+  GammaEnergy = fE * 1E3; // in MeV
+  emin = 1. / ( 1./GammaEnergy + 2./me );
+  smax = emin/GammaEnergy + GammaEnergy/emin + pow((1.+me/GammaEnergy-me/emin),2) - 1.;
+  
+  reject = 1;
+  while(reject)
+    {
+      efin = emin + Rand()*(GammaEnergy - emin);
+      sfin = efin/GammaEnergy + GammaEnergy/efin;
+      reject = Rand() > sfin/smax;
+    }
+// After compton : e1 -> energy e-  &  efin -> energy phot
+  e1 = GammaEnergy - efin;   
+
+
+ if(e1>EMIN_E_MeV || efin> kEMinG) {
+    //diffusion angles of the photon
+    c_dth = 1 + me*(1./GammaEnergy - 1./efin);
+    s_dth = sqrt(1 - c_dth*c_dth);
+    dph = 2 * PI * Rand();
+    c_dph = cos(dph);
+    s_dph = sin(dph);
+    //new direction cosines of the photon
+    uxy = sqrt(ux*ux + uy*uy);
+    if(uxy != 0){
+      vx = -uy/uxy;
+      vy = ux/uxy;
+      vz = 0.;
+      wx = uy*vz-uz*vy;
+      wy = uz*vx-ux*vz;
+      wz = ux*vy-uy*vx;
+    }
+    else
+      {
+	vx = 1;
+	vy = 0;
+	vz = 0;
+	wx = 0;
+	wy = 1;
+	wz = 0;
+      }
+    
+    ux_f = c_dth*ux+s_dth*(c_dph*vx+s_dph*wx);
+    uy_f = c_dth*uy+s_dth*(c_dph*vy+s_dph*wy);
+    uz_f = c_dth*uz+s_dth*(c_dph*vz+s_dph*wz);
+  }
+ 
+ //  scattered electron
+ if(e1>EMIN_E_MeV) {
+   p1 = sqrt(2*me*e1 + e1*e1);
+   ux_el = (GammaEnergy*ux - efin*ux_f)/p1;
+   uy_el = (GammaEnergy*uy - efin*uy_f)/p1;
+   uz_el = (GammaEnergy*uz - efin*uz_f)/p1;
+   
+   ParticleInScint * pel=
+     new ParticleInScint(fISta,-2,fId,xx,yy,zz,ux_el,uy_el,uz_el,fT,e1,fW);
+   pel->DoEDSim();
+ 
+   delete pel;
+   
+ }
+ 
+ //scattered photon
+  if(efin > kEMinG)
+    {
+      GammaEnergy = efin;
+      ux = ux_f;
+      uy = uy_f;
+      uz = uz_f;
+
+      ParticleInScint * ph =
+	new ParticleInScint(fISta,1,fId,xx,yy,zz,ux,uy,uz,fT,efin,fW);
+      ph->DoEDSim();
+
+      delete ph;      
+    }
+  
+}
+
+
+
+
+/////////////////////////////////////////////////
+// IF PHOTOELECTRIC EFFECT, ENERGY DEPOSITED ? //
+/////////////////////////////////////////////////
+
+ void ParticleInScint::PhotoElectricEffect()
+ {
+ if(PrintCout == 1) cout << " Photoelectric Effect !" << endl;
+   Double_t xx, yy, zz, ux, uy, uz, e_ph, timr, weight;
+   Double_t cc;
+   Double_t e1;
+   Double_t IntLength = Rand();
+   Double_t WorkFunction = 4.25 * 1E-6; //Energy to extract an electron from lead in MeV
+
+   xx = fX;
+   yy = fY;
+   zz = fZ;
+   ux = fUX;
+   uy = fUY;
+   uz = fUZ;
+   e_ph = fE;
+   timr = fT;
+   weight = fW;
+   
+   // New coord.
+   xx = xx + IntLength * ux;
+   yy = yy + IntLength * uy;
+   zz = zz + IntLength * uz;
+   timr = timr + IntLength / CLIGHT;
+   
+   e1 = e_ph - WorkFunction; // electron energy
+
+   ParticleInScint * p1 =
+     new ParticleInScint(fISta,-2,fId,xx,yy,zz,fUX,fUY,fUZ,timr,e1,fW);
+   p1->DoEDSim();
+   
+   delete p1;
+   
+   return;
+ }
+
+
+
+
+  /*-----------------------------------------------------
+  -                FOR MUONS AND ELECTRONS              -
+  -  Compute the energy deposited by muons & electrons  -
+  -  in the scintillator/Lead  function of distance !!  -     -                                                     -
+  -----------------------------------------------------*/
+
+void ParticleInScint::EnergyLossInScint()
+{
+  if(PrintCout == 1) cout<<"EnergyLossInScint!"<<endl;
+  double beta, gamma, eta, s, p, Ek, tau, F, Wmax, lgfactor;
+  double dx = GLength * 100. * density; // in g/cm²
+  double fE_MeV = fE * 1E3;
+  double new_fE;
+
+
+  if(theConfig()->EDMode == "Scint")
+    new_fE = fE_MeV; // Convert energy particle GeV -> MeV
+  else if(theConfig()->EDMode == "Pb&Scint" && (abs(fId) == 2))
+    new_fE = fE_MeV - ElectronEnergyLossLead;
+  else if(theConfig()->EDMode == "Pb&Scint" && (abs(fId) == 3))
+    new_fE = fE_MeV - MuonEnergyLossLead;
+
+
+  switch (abs(fId)) {
+    
+  case 1:
+    break;
+    
+  case 2:
+    // ElectronEnergyLoss : Loss of energy by electron in the scintillator in MeV (W.R. Leo p.35) :
+    if(theConfig()->EDMode == "Scint")
+      cout << "Energy of electron, new_fE = fE * 1E3 = " << new_fE << " MeV" << endl;
+    else if(theConfig()->EDMode == "Pb&Scint" && (abs(fId) == 2))
+      cout << "Energy of electron, new_fE = fE - ElectronEnergyLossLead = " << new_fE << " MeV" << endl;
+    else if(theConfig()->EDMode == "Pb&Scint" && (abs(fId) == 3))
+      cout << "Energy of electron, new_fE = fE - MuonEnergyLossLead = " << new_fE << " MeV" << endl;
+
+    p = sqrt(new_fE*new_fE - me*me);
+    beta = p/new_fE; 
+    gamma = new_fE/me;
+    eta = p/me;
+    Ek = me * (gamma - 1.);
+    tau = Ek/me;
+    lgfactor = log( (tau*tau*(tau+2.)) / (2.*(I/me)*(I/me)) );
+    F = 1. - beta*beta + ( tau*tau/8. - (2.*re+1.)*log(2.) ) / ( (tau+1.)*(tau+1.) );
+    
+    ElectronEnergyLoss = factor * Z/A * 1/(beta*beta) * (lgfactor + F - delta - 2.* C/Z) * dx; // Energy loss in MeV
+    
+    cout <<"CAS 2 :  new_fE = " << new_fE << " MeV, Beta = " << beta << ", Energy Loss = " << ElectronEnergyLoss << " MeV, GLength = " << GLength*100 << " cm" << endl;
+    break;
+    
+  case 3:
+    // MuonEnergyLoss : Loss of energy by muon in the scintillator in MeV
+    //cout << "Energy of muon, fE = "<< fE << " MeV" << endl;
+
+    p = sqrt(new_fE*new_fE - M*M);
+    gamma = new_fE/M;
+    beta = p/new_fE; 
+    eta = p/M;
+    s  = me / M;
+    Wmax = (2.*me*eta*eta)/(1. + 2.*gamma*s + s*s);
+    lgfactor = log( (2.*me * eta*eta * Wmax) / (I*I));
+    
+    // Muon energy loss in GeV
+    MuonEnergyLoss = factor * Z/A * (1/(beta*beta)) * (lgfactor - 2. *(beta*beta) - delta - 2.* C/Z) * dx; 
+    
+    //cout << "CAS 3 :  new_fE = " << new_fE << " MeV, MuonEnergyLoss = " << MuonEnergyLoss << ", GLength = " << GLength*100 << " cm" << endl;
+    break;
+    
+  default:
+    cerr << "Error in ParticleInScint::EnergyLoss..." << endl;    
+  }  
+}
+
+
+void ParticleInScint::EnergyLossInLead()
+{
+    if(PrintCout == 1) cout<<"EnergyLossLead!"<<endl;
+  double beta, gamma, eta, s, p, Ek, tau, F, Wmax, lgfactor;
+  double dx = GLength * 100. * density_Pb; // in g/cm²
+  double new_fE = fE * 1E3; // Convert energy particle GeV -> MeV
+  
+  switch (abs(fId)) {
+    
+  case 1:
+    break;
+    
+  case 2:
+    cout << "Energy of electron before Lead, new_fE = fE * 1E3 = " << new_fE << " MeV" << endl;
+    p = sqrt(new_fE*new_fE - me*me);
+    beta = p/new_fE; 
+    gamma = new_fE/me;
+    eta = p/me;
+    Ek = me * (gamma - 1.);
+    tau = Ek/me;
+    lgfactor = log( (tau*tau*(tau+2.)) / (2.*(I_Pb/me)*(I_Pb/me)) );
+    F = 1. - beta*beta + ( tau*tau/8. - (2.*re+1.)*log(2.) ) / ( (tau+1.)*(tau+1.) );
+    
+    ElectronEnergyLossLead = factor * Z_Pb/A_Pb * 1/(beta*beta) * (lgfactor + F - delta_Pb - 2.* C_Pb/Z_Pb) * dx; // Energy loss in MeV
+
+    cout <<"CAS 2 (in Lead) :  new_fE = " << new_fE << " MeV, Beta = " << beta << ", Energy Loss in Lead = " << ElectronEnergyLossLead << " MeV, GLength = " << GLength*100 << " cm" << endl;
+
+    break;
+    
+  case 3:
+    p = sqrt(new_fE*new_fE - M*M);
+    gamma = new_fE/M;
+    beta = p/new_fE; 
+    eta = p/M;
+    s = me / M;
+    Wmax = (2.*me*eta*eta)/(1. + 2.*gamma*s + s*s);
+    lgfactor = log( (2.*me * eta*eta * Wmax) / (I_Pb*I_Pb));
+    
+    MuonEnergyLossLead = factor * Z_Pb/A_Pb * (1/(beta*beta)) * (lgfactor - 2. *(beta*beta) - delta_Pb - 2.* C_Pb/Z_Pb) * dx; 
+    break;
+    
+  default:
+    cerr << "Error in ParticleInScint::EnergyLossLead..." << endl;    
+  }
+}
+
+
+
+
+  /*--------------------------------------------------------
+  -  Compute photons produced function the energy lost     -
+  -  in the scintillator.                                  -
+  -  We consider 1 particle produce 8000 photons per MeV   -
+  -  deposited !!                                          -
+  -   light production of about 40% & 2*1E4 hv/MeV deposed -  -   ----->  so, we have 8000 hv/MeV.                     -  -                                                        -
+  ------------------------------------------------------- */
+
+void ParticleInScint::GeneratePhoton()
+{
+  if(PrintCout == 1)  cout<<"GeneratePhoton!"<<endl;
+
+  int partinfG;
+  int partsupG;
+  int partinfE;
+  int partsupE;
+  int partsupM;
+  int partinfM;
+  double fNPhot_temp;
+  
+  switch (abs(fId)) {
+    
+  case 1:  
+    
+    fNPhot_temp = GammaEnergyLoss * 8000;
+    partinfG = floor(fNPhot_temp);
+    partsupG = partinfG + 1;
+    
+    if(fE > 1E-4 && fNPhot_temp-partinfG < partsupG-fNPhot_temp)
+      {
+	fNPhot = partinfG;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else if(GammaEnergyLoss > 1E-4 && fNPhot_temp-partinfG > partsupG-fNPhot_temp)
+      {
+	fNPhot = partsupG;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else
+      {
+	fNPhot = 0;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    break;
+    
+  case 2:    
+    
+    fNPhot_temp = ElectronEnergyLoss * 8000;
+    partinfE = floor(fNPhot_temp);
+    partsupE = partinfG + 1;
+    
+    if(ElectronEnergyLoss > 1E-4 && fNPhot_temp-partinfE < partsupE-fNPhot_temp)
+      {
+	fNPhot = partinfE;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else if(ElectronEnergyLoss > 1E-4 && fNPhot_temp-partinfE > partsupE-fNPhot_temp)
+      {
+	fNPhot = partsupE;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else 
+      {
+	fNPhot = 0;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    break;
+    
+  case 3:
+    
+    fNPhot_temp = MuonEnergyLoss * 8000;
+    partinfM = floor(fNPhot_temp);
+    partsupM = partinfG + 1;
+    
+    if(MuonEnergyLoss > 1E-4 && fNPhot_temp-partinfM < partsupM-fNPhot_temp)
+      {
+	fNPhot = partinfM;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else if(MuonEnergyLoss > 1E-4 && fNPhot_temp-partinfM > partsupM-fNPhot_temp)
+      {
+	fNPhot = partsupM;
+	fTPhot = fT;
+	fIpm = 1;
+      }
+    else 
+      {
+	fNPhot = 0;
+	fTPhot = fT;
+	fIpm = 1;
+     }
+    break;
+    
+  default:
+    cerr << "Error in ParticleInScint::GeneratePhoton..." << endl;                      
+  }  
+  
+}

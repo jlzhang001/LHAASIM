@@ -1,0 +1,43 @@
+#mode 			(SHOWER)
+SHOWER
+#simmode 		(FAST | DETAILED | SAMPLE)
+DETAILED
+#muemmode      		(DEFAULT | MUEM) (if MUEM, mu and em traces)  
+MUEM	
+#elecmode      		(DEFAULT | FULL | PM | SHOWSAT)(if FULL intermediate elecsim written)
+FULL
+#EDmode                 (Scint | Pb&Scint)
+Pb&Scint
+#number of events	
+1
+#arraymode 		(READFILE | KM2A | STARARRAY) 
+KM2A
+#arrayfilename 		(filename ED array | number of stations in KM2A default array)
+10
+#arrayMDfilename        (filename of MD array)
+MD_pos.txt
+#eventmode		(DEFAULT | READAVERAGEPOS) (choice of the shower core)
+DEFAULT			
+#acceptance mode	(1=ON | 0=OFF) (choice of the shower core)
+0				
+#easting average	(easting coord ,relevant only in   READAVERAGEPOS mode)
+0	
+#easting spread		(in easting coordinates in READAVERAGEPOS mode)
+.8			(In DEFAULT mode , put 1 for dispersion on full array)
+#northing average	(northing coord relevant only in   READAVERAGEPOS mode)
+0
+#northing spread	(in northing coordinates in READAVERAGEPOS mode)
+.8			(In DEFAULT mode , put 1 for dispersion on full array)
+#Rotation of the shower
+240
+#rmin (m) 
+0 
+#rmax (m)
+4000
+#delta_r (sampling zone)
+0.15
+#delta_azi (sampling zone)
+20
+#max number of clones
+1
+#

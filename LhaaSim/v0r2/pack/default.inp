@@ -1,0 +1,27 @@
+#mode 			(DO NOT MODIFY!!!)
+CALIB
+#simmode 		(FAST | DETAILED | SAMPLE)
+DETAILED
+#muemmode      		(DEFAULT | MUEM) (if MUEM, mu and em traces)  
+DEFAULT	
+#elecmode      		(DEFAULT | FULL | PM | SHOWSAT)(if FULL intermediate elecsim written)
+PM
+#number of events	(Number of particles injected in station)
+100
+#
+###### Modify values but do not delete lines or reorder them #######
+#
+#runnumber		(Used for File naming)
+01
+#partmode      		(VEM| SCINTILLATOR| FIXEDTHETA| HORIZONTAL| RANDOM)
+VEM
+#partcode		(3 for muons, 2 for electrons, 1 for gammas,0 for all)
+3
+#partenergy		(in GeV = 1 Gev for VEM, 0=spectrum)
+1
+#parttheta		(in degrees relevant only in THETAFIXED mode)
+0
+#partaddmode		(DEFAULT | DOUBLE | MULTIPLE)
+DEFAULT
+#npartmultiple		(relevant only in multiple and calibration mode = mu number)
+20

@@ -1,0 +1,11 @@
+#! /usr/local/bin/tcsh -f
+cd $TMPBATCH
+setenv ROOTSYS /usr/local/root/new/root
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${ROOTSYS}/lib
+rfcp $HPSS_PAUGER/users/Denis/Piera/DAT000079 DAT000079.part
+cp /afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/EasySim/v5r1/data/default.inp .
+/afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/Convert/v0r2/ia32_rhel3/CorsToRoot.exe DAT000079.part DAT000079.root
+/afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/EasySim/v5r1/ia32_rhel3/EasySim.exe DAT000079.root
+/afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/EasySim/v5r1/ia32_rhel3/easysim2cdas.exe Sim_DAT000079.root
+cp Sim_DAT000079.root /afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/EasySim/v5r1/data
+cp cdas_DAT000079.root /afs/in2p3.fr/group/pauger/users9/ipno/EASYSIM/EasySim/v5r1/data

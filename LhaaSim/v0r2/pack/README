@@ -1,0 +1,2 @@
+This directory is used to make a package of EasySim which does not use CMT
+nor Aires, fortran, CDAS I/O, etc. It only simulates a detector in CALIB mode.

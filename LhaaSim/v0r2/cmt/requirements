@@ -1,0 +1,29 @@
+package LhaaSim
+
+author D. Martraire
+manager martrair@to.infn.it
+
+use Convert v0r2 
+use RootW v2r8
+#use IoSd v2r8
+#use Ec v1r0
+branches data doc
+
+document rootdict EventDict -s=../src Event.h Station.h Array.h Particle.h LhaaSimLinkDef.h
+document rootdict AnaDict -s=../src Analyze.h AnaLinkDef.h 
+
+library Event Event.cc Station.cc Array.cc Particle.cc EventDict.cc 
+library Tools ShowerParam.cc Utils.cc BuildProcessesTables.cc FastSimulation.cc ManageEvent.cc
+library Config LhaaSimConfig.cc
+library Ana Analyze.cc AnaDict.cc
+
+macro_append LhaaSim_cppflags " -g "
+macro_append LhaaSim_linkopts "-L$(LHAASIMROOT)/$(LhaaSim_tag) -Wl,--no-as-needed -Wl,-rpath $(LHAASIMROOT)/$(LhaaSim_tag) "
+macro_append LhaaSim_linkopts " -lEvent -lTools -lConfig "
+macro_append LhaaSim_linkopts " -lAna "
+
+application LhaaSim LhaaSim.cc
+application AnaEvent AnaEvent.cc 
+application anamuons anamuons.cc 
+
+

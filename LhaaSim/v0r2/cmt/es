@@ -1,0 +1,44 @@
+Checking configuration
+Rebuilding cmt_path.make
+Rebuilding constituents.make
+Rebuilding library links
+Rebuilding setup.make
+Linux-x86_64.make ok
+Document EventDict
+ starting EventDict
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+make[1]: Rien à faire pour « EventDict ».
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Document AnaDict
+ starting AnaDict
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+make[1]: Rien à faire pour « AnaDict ».
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Library Event
+ starting Event
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Rebuilding ../Linux-x86_64/Event_dependencies.make
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+../Linux-x86_64/EventDict.o
+cd ../Linux-x86_64/; c++ -c -I"../src/" -I"../../../Convert/v0r2/src" -I"/home/deligny/CDAS/RootW/v2r8/src"   -pipe   -W -Wall -Wwrite-strings -Wpointer-arith      -Wall -pthread -m64 -I/usr/physics/root/pro/include -DROOT_5_32_03 -Wno-deprecated -Wno-long-long  -Wno-deprecated  -DOPTIMIZED_VERSION -O  -fPIC -D__LINUX64__  -D_GNU_SOURCE -o EventDict.o        -g  -DBETA_VERSION -DVERSION="0" -DREVISION="0"        ../src/EventDict.cc
+library
+cd ../Linux-x86_64/; ar r ../Linux-x86_64/libEvent.a ../Linux-x86_64/EventDict.o
+ranlib ../Linux-x86_64/libEvent.a
+cat /dev/null >../Linux-x86_64/Event.stamp
+cd ../Linux-x86_64/; /home/deligny/CDAS/CMT/v1r8cdas/mgr/cmt_make_shlib_common.sh extract Linux-x86_64 Event 
+------> Event : library ok
+------> Event ok
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Library Tools
+ starting Tools
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Rebuilding ../Linux-x86_64/Tools_dependencies.make
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+------> Tools : library ok
+------> Tools ok
+make[1]: quittant le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »
+Library Config
+ starting Config
+make[1]: entrant dans le répertoire « /projet/auger/Diane/LHAASIM/LhaaSim/v0r2/cmt »

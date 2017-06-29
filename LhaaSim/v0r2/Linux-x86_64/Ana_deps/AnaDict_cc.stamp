@@ -1,0 +1,1 @@
+AnaDict_cc_dependencies =  ../src/AnaDict.cc   ../src/AnaDict.h  $(bin)Ana_deps/AnaDict_cc.stamp

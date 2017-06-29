@@ -1,0 +1,88 @@
+Analyze.cc:	  nmu=sta->fNmu;
+Analyze.cc:	  nel=sta->fNel;
+Analyze.cc:	  nph=sta->fNph;
+Analyze.cc:	  nPeMu=sta->fNpe_mu;
+Analyze.cc:	  nPePh=sta->fNpe_ph;
+Analyze.cc:	  nPeEl=sta->fNpe_el;
+Analyze.cc:	  nPeDir=sta->fNpe_direct;
+Analyze.cc:	  dist = sta->fR_sf;
+Analyze.cc:	  nmu = sta->fNmu;
+Analyze.cc:	  nel = sta->fNel;
+Analyze.cc:	  nph = sta->fNph;
+Analyze.cc:	  nPeMu=sta->fNpe_mu;
+Analyze.cc:	  nPePh=sta->fNpe_ph;
+Analyze.cc:	  nPeEl=sta->fNpe_el;
+Analyze.cc:	  dist = sta->fR_sf;
+Analyze.cc:      // if(sta->fNpe>10) {
+Analyze.cc:        if(sta->fT2ToT||sta->fT1Threshold) 
+Analyze.cc:	      int idistance = (int)sta->fR_sf;
+Analyze.cc:	      int id = sta->fId;
+Analyze.cc:	      // adcsum=sta->fADC;
+Analyze.cc:		if(sta->fADC[0][k]!=0){
+Analyze.cc:		  histo->Fill(k,sta->fADC[0][k]);
+Analyze.cc:		  cout<<id<<" "<<k<<" "<<sta->fADC[0][k]<<endl;
+Analyze.cc:	      //adcsum=sta->fADC_mu;
+Analyze.cc:// 		if(sta->fADC_mu[0][k]!=0){
+Analyze.cc:// 		  histo_mu->Fill(k,sta->fADC_mu[0][k]);
+Analyze.cc:      if(sta->fNpe>0) 
+Analyze.cc:	      int idistance = (int)sta->fR_sf;
+Analyze.cc:	      int id = sta->fId;
+Analyze.cc:	      // adcsum=sta->fPMT[ipm].fADC;
+Analyze.cc:		if(sta->fPMT[ipm].fADC[0][k]!=0){
+Analyze.cc:		  histo->Fill(k,sta->fPMT[ipm].fADC[0][k]);
+Analyze.cc:	      //adcsum=sta->fPMT[ipm].fADC_mu;
+Analyze.cc:		if(sta->fPMT[ipm].fADC_mu[0][k]!=0){
+Analyze.cc:		  histo_mu->Fill(k,sta->fPMT[ipm].fADC_mu[0][k]);
+Analyze.cc:      if(sta->fNpe>0 && (sta->fT1Threshold || sta->fT2ToT)) 
+Analyze.cc:	      int idistance = (int)sta->fR_sf;
+Analyze.cc:	      int id = sta->fId;
+Analyze.cc:	      //adcsum=sta->fADC;
+Analyze.cc:		if(sta->fADC[0][k]!=0){
+Analyze.cc:		  histo->Fill(k,sta->fADC[0][k]/VEMPEAKVALUEINADC);
+Analyze.cc:		  sum+=sta->fADC[0][k];
+Analyze.cc:	      //adcsum=sta->fADC_mu;
+Analyze.cc:		if(sta->fADC_mu[0][k]!=0){
+Analyze.cc:		  histo_mu->Fill(k,sta->fADC_mu[0][k]/VEMPEAKVALUEINADC);
+Analyze.cc:	      cout<<"signal of station "<< sta->fId<<" = "<<sum/VEMCHARGEVALUEINADC/(int)NPM<<" VEM"<<endl;
+Analyze.cc:      if(sta->fNpe>0 &&(sta->fT1Threshold || sta->fT2ToT)) 
+Analyze.cc:	      int idistance = (int)sta->fR_sf;
+Analyze.cc:	      int id = sta->fId;
+Analyze.cc:	      // adcsum=sta->fPMT[ipm].fADC;
+Analyze.cc:		if(sta->fPMT[ipm].fADC[0][k]!=0){
+Analyze.cc:		  histo->Fill(25*k,sta->fPMT[ipm].fADC[0][k]/VEMPEAKVALUEINADC);
+Analyze.cc:		  sum+=sta->fPMT[ipm].fADC[0][k];
+Analyze.cc:	      cout<<"signal of station "<< sta->fId<<" = "<<sum/VEMCHARGEVALUEINADC<<" VEM"<<endl;     
+Analyze.cc:    if(sta->fT1Threshold ||sta->fT2ToT ||sta->fT2Threshold)
+Analyze.cc:      outfile <<sta->fId <<"\t "<<sta->fR_sf<<"\t"<<sta->fNph<<"\t"<<sta->fNel<<"\t"<<sta->fNmu<<"\t"<<sta->fNpe_ph<<"\t"<<sta->fNpe_el<<"\t"<<sta->fNpe_mu<<" "<<(int)(sta->fNpe_ph/sta->fNph)<<" "<<(int)(sta->fNpe_el/sta->fNel)<<" "<<(int)(sta->fNpe_mu/sta->fNmu)<<" "<<sta->fNpe_mu/(sta->fNpe_el+sta->fNpe_ph)<<endl;
+Analyze.cc:     cout <<i<< "\t tank " <<sta->fId <<"\t pel = "<<sta->fNpe<<         	"\t nmu = "<<sta->fNmu<<"\t nel = "<<sta->fNel<<"\t nph = "<<sta->fNph<<"\t dist = "<<sta->fR_sf<<"\t samp = "<<sta->fSampFact<<"\t time = "<<sta->fTime0<<"\t pemu= "<<sta->fNpe_mu<<"\t peel= "<<sta->fNpe_el<<"\t peph = "<<sta->fNpe_ph<<endl ; 
+Analyze.cc:      cout <<i<< "\t tank " <<sta->fId << "  dist_Sf= " << sta->fR_sf <<" \t time ="<<sta->fTime0<<"\t petot= "<<sta->fNpe<< endl ; 
+Analyze.cc:      if(sta->fT1Threshold ||sta->fT2ToT ||sta->fT2Threshold)
+Analyze.cc:      outfile <<sta->fId <<"\t "<<sta->fR_sf<<"\t"<<sta->fNph<<"\t"<<sta->fNel<<"\t"<<sta->fNmu<<"\t"<<sta->fNpe_ph<<"\t"<<sta->fNpe_el<<"\t"<<sta->fNpe_mu<<" "<<(int)(sta->fNpe_ph/sta->fNph)<<" "<<(int)(sta->fNpe_el/sta->fNel)<<" "<<(int)(sta->fNpe_mu/sta->fNmu)<<" "<<sta->fNpe_mu/(sta->fNpe_el+sta->fNpe_ph)<<endl;
+Analyze.cc:     cout <<i<< "\t scint " <<sta->fId <<"\t pel = "<<sta->fNpe<<         	"\t nmu = "<<sta->fNmu<<"\t nel = "<<sta->fNel<<"\t nph = "<<sta->fNph<<"\t dist = "<<sta->fR_sf<<"\t samp = "<<sta->fSampFact<<"\t time = "<<sta->fTime0<<"\t pemu= "<<sta->fNpe_mu<<"\t peel= "<<sta->fNpe_el<<"\t peph = "<<sta->fNpe_ph<<endl ; 
+Analyze.cc:      cout <<i<< "\t scint " <<sta->fId << "  dist_Sf= " << sta->fR_sf <<" \t time ="<<sta->fTime0<<"\t petot= "<<sta->fNpe<< endl ; 
+Analyze.cc:      if(sta->fT1Threshold ||sta->fT2ToT ||sta->fT2Threshold)
+Analyze.cc:	if(sta->fR_sf<2000)
+Analyze.cc:	  outfile <<sta->fId <<"\t "<<sta->fR_sf<<"\t"<<sta->fNph<<"\t"<<sta->fNel<<"\t"<<sta->fNmu<<"\t"<<sta->fNpe_ph<<"\t"<<sta->fNpe_el<<"\t"<<sta->fNpe_mu<<" "<<(sta->fNpe_ph/sta->fNph)<<" "<<(sta->fNpe_el/sta->fNel)<<" "<<(sta->fNpe_mu/sta->fNmu)<<" "<<sta->fNpe_mu/(sta->fNpe_el+sta->fNpe_ph)<<endl;
+Analyze.cc:	if(sta->fId!=ista)continue;
+Analyze.cc:      if(sta->fT1Threshold ||sta->fT2ToT ||sta->fT2Threshold)
+Analyze.cc:	if(sta->fR_sf<2000)
+Analyze.cc:	  //  outfile <<sta->fId <<"\t "<<sta->fR_sf<<"\t"<<sta->fNph<<"\t"<<sta->fNel<<"\t"<<sta->fNmu<<"\t"<<sta->fNpe_ph<<"\t"<<sta->fNpe_el<<"\t"<<sta->fNpe_mu<<" "<<(sta->fNpe_ph/sta->fNph)<<" "<<(sta->fNpe_el/sta->fNel)<<" "<<(sta->fNpe_mu/sta->fNmu)<<" "<<sta->fNpe_mu/(sta->fNpe_el+sta->fNpe_ph)<<endl;
+Analyze.cc:      nmu+=sta->fNmu;
+Analyze.cc:      nel+=sta->fNel;
+Analyze.cc:      nph+=sta->fNph;
+Analyze.cc:      npeph+=sta->fNpe_ph;
+Analyze.cc:      npemu+=sta->fNpe_mu;
+Analyze.cc:      npeel+=sta->fNpe_el;
+Analyze.cc:      rael+=sta->fNpe_el/sta->fNel;
+Analyze.cc:      ramu+=sta->fNpe_mu/sta->fNmu;
+Analyze.cc:      raph+=sta->fNpe_ph/sta->fNph;
+Analyze.cc:      ramuel+=sta->fNpe_mu/(sta->fNpe_el+sta->fNpe_ph);
+Analyze.cc:	  dist->Fill(sta->fR_sf,1.);
+Analyze.cc:	  if (sta->fR_sf<200.)
+Analyze.cc:	    cout <<"tank " <<sta->fId << "  dist_Sf= " << sta->fR_sf << endl ; 
+Analyze.cc:	if(sta->fNpe>2000) 
+Analyze.cc:	    pm_hi =sta->fPMT[0].fPMTSignal_hi;
+Analyze.cc:	    pm_lo =sta->fPMT[0].fPMTSignal_lo;
+Analyze.cc:	    double samp=sta->fSampFact;
+Analyze.cc:		if(sta->fPMT[ipm].fADC[0][ibin]>LowThreshold && sta->fPMT[ipm].fADC[0][ibin]<UpThreshold){
+Analyze.cc:		    if(sta->fPMT[ipm].fADC[0][ibin] > LowThreshold && sta->fPMT[ipm].fADC[0][ibin]<UpThreshold) count2+=1;
