@@ -1,0 +1,26 @@
+#version# 7.5600#versiondate# 20160817#modelversion# 204.000#rundate# 20170509
+#computer# 3#curved# 0#neutrino# 0#cerenkov#  0#runnumber#   2014
+#primary#   14#e_range_l# 1.0000000E+06#e_range_u# 1.0000000E+06
+#slope# -2.7000000E+00#nkg# 0#egs# 1
+#model# 3#gheisha# 1#charm# 0#model+crossect# 33
+#hadflag1# 0#hadflag2# 0#hadflag3# 0#hadflag4# 0#hadflag5# 0#hadflag6# 2
+#longi# 1#longistep# 1.0000000E+01#magnetx#  3.4500000E+01
+#magnetz#  3.5500000E+01#nobslev#  1
+#obslev1#  4.4000000E+05#obslev2#  0.0000000E+00#obslev3#  0.0000000E+00
+#obslev4#  0.0000000E+00#obslev5#  0.0000000E+00#obslev6#  0.0000000E+00
+#obslev7#  0.0000000E+00#obslev8#  0.0000000E+00#obslev9#  0.0000000E+00
+#obslev10#  0.0000000E+00#hcut# 3.0000000E-01#mcut# 3.0000000E-01
+#ecut# 3.0000000E-04#gcut# 3.0000000E-04#theta_l# 3.0000000E+01
+#theta_u# 3.0000000E+01#phi_l#  0.0000000E+00#phi_u#  3.6000000E+02
+#fixhei# 0.0000000E+00#n1sttr#  0#fixchi# 0.0000000E+00
+#stepfc# 1.0000000E+00#arrang#  0.0000000E+00#muaddi# 1
+#himpact1# 0.0000000E+00#himpact1# 0.0000000E+00#nseq# 3
+#seq1seed1#   1850001#seq1seed2#        0#seq1seed3#        0
+#seq2seed1#   1850002#seq2seed2#        0#seq2seed3#        0
+#seq3seed1#   1850003#seq3seed2#        0#seq3seed3#        0
+#size#         0
+#dsn_events#./DAT002014                                                
+#dsn_prtout# LST002014#tape_name# ARC000.01#backup# ARC000.01
+#howmanyshowers#         1#host#                                                            #user#martraire                                                   
+#thinning# 0#thinnlev_had# 0.0000000E+00
+#energy_prim# 1.0000000E+06#theta_prim# 3.0000000E+01#phi_prim#-1.6442209E+02

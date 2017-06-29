@@ -1,0 +1,1 @@
+RotToAugerFr_cc_dependencies =  ../src/RotToAugerFr.cc   ../src/RotToAugerFr.h  $(bin)ShowerIO_deps/RotToAugerFr_cc.stamp

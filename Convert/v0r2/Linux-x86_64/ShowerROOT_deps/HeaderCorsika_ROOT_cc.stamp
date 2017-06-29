@@ -1,0 +1,1 @@
+HeaderCorsika_ROOT_cc_dependencies =  ../src/HeaderCorsika_ROOT.cc   ../src/root.h   ../src/Header_ROOT.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/HeaderCorsika_ROOT.h   ../src/CorsikaConst.h   ../src/RotToAugerFr.h   ../src/IOCorsika.h  $(bin)ShowerROOT_deps/HeaderCorsika_ROOT_cc.stamp

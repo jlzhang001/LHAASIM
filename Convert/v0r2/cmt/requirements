@@ -1,0 +1,68 @@
+package Convert
+
+author Many people
+manager martrair@to.infn.it
+
+use RootW v2r8
+
+branches data doc
+
+document rootdict ShowerROOTDict -s=../src \
+Shower_ROOT.h ShowerGrnd_ROOT.h ShowerProf_ROOT.h \
+HeaderCorsika_ROOT.h PartGrnd_ROOT.h \
+ShowerROOTLinkDef.h
+
+library ShowerIO IOCorsika.cc RotToAugerFr.cc 
+#library IOAires.cc HeaderAires_ROOT.cc 
+ 
+
+library ShowerROOT Header_ROOT.cc HeaderCorsika_ROOT.cc PartGrnd_ROOT.cc Shower_ROOT.cc ShowerGrnd_ROOT.cc ShowerProf_ROOT.cc ShProperties.cc ShowerROOTDict.cc
+
+#The Utils library
+#-----------------------------
+library Utils Utils.cc utilities.cc
+
+macro Convert_linkopts " -L$(CONVERTROOT)/$(Convert_tag) -lShowerROOT -lShowerIO -lUtils -Wl,--no-as-needed -Wl,-rpath $(CONVERTROOT)/$(Convert_tag)  -lgfortran "
+
+
+
+macro Convert_cppflags '-DBETA_VERSION -DVERSION="0" -DREVISION="0"'
+application CorsToRoot CorsToRoot.cc globalvar.cc
+
+#AIRES :
+#macro_append Convert_cppflags -DVERSION=0 -DREVISION=0"
+#application AiresToRoot AiresToRoot.cc globalvar.cc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1 @@
+ShowerROOTDict_cc_dependencies =  ../src/ShowerROOTDict.cc   ../src/ShowerROOTDict.h  $(bin)ShowerROOT_deps/ShowerROOTDict_cc.stamp

@@ -1,0 +1,8 @@
+Header_ROOT_cc_dependencies =  ../src/Header_ROOT.cc   ../src/root.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/HeaderCorsika_ROOT.h   ../src/Header_ROOT.h  $(bin)ShowerROOT_deps/Header_ROOT_cc.stamp
+HeaderCorsika_ROOT_cc_dependencies =  ../src/HeaderCorsika_ROOT.cc   ../src/root.h   ../src/Header_ROOT.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/HeaderCorsika_ROOT.h   ../src/CorsikaConst.h   ../src/RotToAugerFr.h   ../src/IOCorsika.h  $(bin)ShowerROOT_deps/HeaderCorsika_ROOT_cc.stamp
+PartGrnd_ROOT_cc_dependencies =  ../src/PartGrnd_ROOT.cc   ../src/root.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/Globals.h  $(bin)ShowerROOT_deps/PartGrnd_ROOT_cc.stamp
+Shower_ROOT_cc_dependencies =  ../src/Shower_ROOT.cc   ../src/root.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/HeaderCorsika_ROOT.h   ../src/Header_ROOT.h   ../src/ShowerGrnd_ROOT.h   ../src/ShowerProf_ROOT.h   ../src/Shower_ROOT.h   ../src/Globals.h  $(bin)ShowerROOT_deps/Shower_ROOT_cc.stamp
+ShowerGrnd_ROOT_cc_dependencies =  ../src/ShowerGrnd_ROOT.cc   ../src/root.h   ../src/ShProperties.h   ../src/PartGrnd_ROOT.h   ../src/HeaderCorsika_ROOT.h   ../src/Header_ROOT.h   ../src/ShowerGrnd_ROOT.h   ../src/Globals.h  $(bin)ShowerROOT_deps/ShowerGrnd_ROOT_cc.stamp
+ShowerProf_ROOT_cc_dependencies =  ../src/ShowerProf_ROOT.cc   ../src/ShowerProf_ROOT.h  $(bin)ShowerROOT_deps/ShowerProf_ROOT_cc.stamp
+ShProperties_cc_dependencies =  ../src/ShProperties.cc   ../src/ShProperties.h  $(bin)ShowerROOT_deps/ShProperties_cc.stamp
+ShowerROOTDict_cc_dependencies =  ../src/ShowerROOTDict.cc   ../src/ShowerROOTDict.h  $(bin)ShowerROOT_deps/ShowerROOTDict_cc.stamp

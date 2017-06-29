@@ -1,0 +1,145 @@
+#-- start of make_header -----------------
+
+#====================================
+#  Document ShowerROOTDict
+#
+#   Generated Wed Apr  5 15:00:58 2017  by martraire
+#
+#====================================
+
+include ${CMTROOT}/src/Makefile.core
+
+ifdef tag
+CMTEXTRATAGS = $(tag)
+else
+tag       = $(CMTCONFIG)
+endif
+
+cmt_ShowerROOTDict_has_no_target_tag = 1
+
+#--------------------------------------------------------
+
+ifdef cmt_ShowerROOTDict_has_target_tag
+
+tags      = $(tag),$(CMTEXTRATAGS),target_ShowerROOTDict
+
+Convert_tag = $(tag)
+
+#cmt_local_tagfile_ShowerROOTDict = $(Convert_tag)_ShowerROOTDict.make
+cmt_local_tagfile_ShowerROOTDict = $(bin)$(Convert_tag)_ShowerROOTDict.make
+
+else
+
+tags      = $(tag),$(CMTEXTRATAGS)
+
+Convert_tag = $(tag)
+
+#cmt_local_tagfile_ShowerROOTDict = $(Convert_tag).make
+cmt_local_tagfile_ShowerROOTDict = $(bin)$(Convert_tag).make
+
+endif
+
+include $(cmt_local_tagfile_ShowerROOTDict)
+#-include $(cmt_local_tagfile_ShowerROOTDict)
+
+ifdef cmt_ShowerROOTDict_has_target_tag
+
+cmt_final_setup_ShowerROOTDict = $(bin)setup_ShowerROOTDict.make
+#cmt_final_setup_ShowerROOTDict = $(bin)Convert_ShowerROOTDictsetup.make
+cmt_local_ShowerROOTDict_makefile = $(bin)ShowerROOTDict.make
+
+else
+
+cmt_final_setup_ShowerROOTDict = $(bin)setup.make
+#cmt_final_setup_ShowerROOTDict = $(bin)Convertsetup.make
+cmt_local_ShowerROOTDict_makefile = $(bin)ShowerROOTDict.make
+
+endif
+
+cmt_final_setup = $(bin)setup.make
+#cmt_final_setup = $(bin)Convertsetup.make
+
+#ShowerROOTDict :: ;
+
+dirs ::
+	@if test ! -r requirements ; then echo "No requirements file" ; fi; \
+	  if test ! -d $(bin) ; then $(mkdir) -p $(bin) ; fi
+
+javadirs ::
+	@if test ! -d $(javabin) ; then $(mkdir) -p $(javabin) ; fi
+
+srcdirs ::
+	@if test ! -d $(src) ; then $(mkdir) -p $(src) ; fi
+
+help ::
+	$(echo) 'ShowerROOTDict'
+
+binobj = 
+ifdef STRUCTURED_OUTPUT
+binobj = ShowerROOTDict/
+#ShowerROOTDict::
+#	@if test ! -d $(bin)$(binobj) ; then $(mkdir) -p $(bin)$(binobj) ; fi
+#	$(echo) "STRUCTURED_OUTPUT="$(bin)$(binobj)
+endif
+
+ifdef use_requirements
+$(use_requirements) : ;
+endif
+
+#-- end of make_header ------------------
+#-------------------------------------------
+
+src     = ../src/
+
+ShowerROOTDict_output = $(src)
+  
+ShowerROOTDict :: $(src)/ShowerROOTDict
+
+$(src)/ShowerROOTDict :: $(ShowerROOTDict_output)Shower_ROOT.h $(ShowerROOTDict_output)ShowerGrnd_ROOT.h $(ShowerROOTDict_output)ShowerProf_ROOT.h $(ShowerROOTDict_output)HeaderCorsika_ROOT.h $(ShowerROOTDict_output)PartGrnd_ROOT.h $(ShowerROOTDict_output)ShowerROOTLinkDef.h
+	cd $(src); ${ROOTBIN}/rootcint -f ShowerROOTDict.cc -c ${CINTOPT} ${CINT_use_includes} $(ShowerROOTDict_output)Shower_ROOT.h $(ShowerROOTDict_output)ShowerGrnd_ROOT.h $(ShowerROOTDict_output)ShowerProf_ROOT.h $(ShowerROOTDict_output)HeaderCorsika_ROOT.h $(ShowerROOTDict_output)PartGrnd_ROOT.h $(ShowerROOTDict_output)ShowerROOTLinkDef.h; touch ShowerROOTDict
+	@/bin/echo "---> ShowerROOTDict ok"
+		 
+ShowerROOTDictclean ::
+	/bin/rm -f .rootsys
+	cd $(src); /bin/rm -f ShowerROOTDict ShowerROOTDict.h; echo >ShowerROOTDict.cc
+ 
+#-------------------------------------------                                    
+Shower_ROOT_h_dependencies = ../src/Shower_ROOT.h
+ShowerGrnd_ROOT_h_dependencies = ../src/ShowerGrnd_ROOT.h
+ShowerProf_ROOT_h_dependencies = ../src/ShowerProf_ROOT.h
+HeaderCorsika_ROOT_h_dependencies = ../src/HeaderCorsika_ROOT.h
+PartGrnd_ROOT_h_dependencies = ../src/PartGrnd_ROOT.h
+ShowerROOTLinkDef_h_dependencies = ../src/ShowerROOTLinkDef.h
+#-- start of cleanup_header --------------
+
+clean :: ShowerROOTDictclean ;
+#	@cd .
+
+ifndef PEDANTIC
+.DEFAULT::
+	$(echo) "(ShowerROOTDict.make) $@: No rule for such target" >&2
+#	@echo "#CMT> Warning: $@: No rule for such target" >&2; exit
+	if echo $@ | grep '$(package)setup\.make$$' >/dev/null; then\
+	 echo "$(CMTMSGPREFIX)" "(ShowerROOTDict.make): $@: File no longer generated" >&2; exit 0; fi
+else
+.DEFAULT::
+	$(echo) "(ShowerROOTDict.make) PEDANTIC: $@: No rule for such target" >&2
+	if echo $@ | grep '$(package)setup\.make$$' >/dev/null; then\
+	 echo "$(CMTMSGPREFIX)" "(ShowerROOTDict.make): $@: File no longer generated" >&2; exit 0;\
+	 elif test $@ = "$(cmt_final_setup)" -o\
+	 $@ = "$(cmt_final_setup_ShowerROOTDict)" ; then\
+	 found=n; for s in 1 2 3 4 5; do\
+	 sleep $$s; test ! -f $@ || { found=y; break; }\
+	 done; if test $$found = n; then\
+	 test -z "$(cmtmsg)" ||\
+	 echo "$(CMTMSGPREFIX)" "(ShowerROOTDict.make) PEDANTIC: $@: Seems to be missing. Ignore it for now" >&2; exit 0 ; fi;\
+	 elif test `expr $@ : '.*/'` -ne 0 ; then\
+	 test -z "$(cmtmsg)" ||\
+	 echo "$(CMTMSGPREFIX)" "(ShowerROOTDict.make) PEDANTIC: $@: Seems to be a missing file. Please check" >&2; exit 2 ; \
+	 else\
+	 test -z "$(cmtmsg)" ||\
+	 echo "$(CMTMSGPREFIX)" "(ShowerROOTDict.make) PEDANTIC: $@: Seems to be a fake target due to some pattern. Just ignore it" >&2 ; exit 0; fi
+endif
+
+ShowerROOTDictclean ::
+#-- end of cleanup_header ---------------
