@@ -1,9 +1,9 @@
-=====================================================================
-LHAASIM  -  Software simulating the KM2A detector of the LHAASO obs -
-=====================================================================
+=============================================================================
+LHAASIM  -  Software simulating the KM2A detector of the LHAASO observatory -
+=============================================================================
 
-                            LHAASIM
-                            --------
+                                 LHAASIM
+                                 --------
 
 LhaaSim is a fast simulation of the KM2A detector (part of LHAASO observatory).
 LhaaSim is a C++ software, using ROOT and CMT environment. It is a dedicated 
@@ -23,7 +23,7 @@ o Softwares needed :
     - CMT (for example v1r12p20020606)
     - CDAS : the present version uses IoSd v2r6, but can be updated
     - Corsika & Aires libraries (libAires.a & libCors.a)
- 
+
 o Environment variables to be correctly defined :
     - ROOTSYS, PATH & LD_LIBRARY_PATH as usual with ROOT 
     - AIRESLIB or/and CORSLIB
@@ -51,52 +51,52 @@ o The second step is run LhaaSim
 	   "default.inp" according to your needs
 	    it will be read by LhaaSim.
 
-==========================================================================
+====================== FILL INPUT FILE =========================================
 
-N.B : Fill input file
 The input  file is on /LHAASIM/LhaaSim/v*r*/data/default.inp
-The first part is for all modes of simulation
+The first part is for all modes of simulation :
 
 - mode: 
 	o SHOWER  
-	shower simulations reading a root file  "filename.root"
-	the output file will be "Sim_filename.root"
+	  Shower simulations reading a root file  "filename.root"
+	  The output file will be "Sim_filename.root"
       
 	o CALIB
-	 injection of particles in a single tank ,  there is one event
-	 per particle injected
-	 the output file name is given by the program
+	  Injection of particles in a single tank ,  there is one event
+	  per particle injected
+	  The output file name is given by the program
 
 - simmode :
-	o  DETAILED ( mode currently used )
-	  the detail of the simulation of particle and follow up of photons is s
-imulated
+	o DETAILED ( mode currently used )
+	  The detail of the simulation of particle and follow up of photons 
+	  is simulated
 	o FAST  ( not anymore implemented in the present version)
 	o SAMPLE 
-	 stops the simulation at the stage of the sampling of particles in tanks
+	  Stops the simulation at the stage of the sampling of particles 
+	  in tanks.
 
 
 - muemmode
 	o MUEM
-	   give in addition to the usual traces, separate traces for muonic et 
-     electromagnetic components
+	  Give in addition to the usual traces, separate traces for muonic 
+	  and electromagnetic components
 	o DEFAULT
-	  give only the usual traces
+	  Give only the usual traces.
 
 - elecmode
 	o DEFAULT
-	  give the time profile of particules for each PMT and the final traces 
-    for all channels
+	  Give the time profile of particules for each PMT and the final 
+	  traces for all channels
 	o PM
-	  give in addition the profiles in time after PM simulation for each 
-    channel
+	  Give in addition the profiles in time after PM simulation for 
+	  each channel
 	o FULL
-	   give all  profiles for the intermediate steps of the
-	   electronic simulation, after PM and after Front End, in
-	   addition of default mode
+	  Give all  profiles for the intermediate steps of the
+	  electronic simulation, after PM and after Front End, in
+	  addition of default mode
 	o SHOWSAT
-	  give additionnal FADC traces where the saturation due to coding is not
-    applied.
+	  Give additionnal FADC traces where the saturation due to coding 
+	  is not applied.
 
 - number of events
 	o for showers, number of time the same shower is simulated 
@@ -146,9 +146,6 @@ THIS SECOND PART IS RELEVANT ONLY IN CALIB MODE BUT IS ALWAYS READ BY THE PROGRA
 	
 - npartmultiple
 	o see above , relevant only in MULTIPLE mode
-
-
-
 
 
 
